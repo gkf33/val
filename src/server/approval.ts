@@ -10,9 +10,11 @@ import { config } from "./config";
 import { audit, type Actor } from "./audit";
 import { transitionGuests, withPartyLock } from "./capacity";
 import { getMailer } from "./mail/mailer";
-import { approvedMail, rejectedMail, waitlistMail } from "./mail/templates";
+import { approvedMail, rejectedMail, ticketMail, waitlistMail } from "./mail/templates";
+import { ticketUrl } from "./tickets";
 import { paypalMeUrl } from "./payments/paypal";
 import { statusUrl } from "./bookings";
+import { randomToken } from "./crypto";
 
 export class ApprovalError extends Error {
   constructor(message: string) {
@@ -164,10 +166,15 @@ export async function addCrew(actor: Actor, partyId: string, input: { name: stri
         type: "crew",
         status: "paid",
         adultConfirmed: true,
+        ticketToken: randomToken(18),
       },
     });
   });
   await audit(actor, "crew.add", { partyId, entityType: "Guest", entityId: guest.id, data: { name, role: guest.role } });
+  if (guest.email) {
+    const party = await prisma.party.findUniqueOrThrow({ where: { id: partyId } });
+    await getMailer().send(ticketMail(guest.email, party, guest.name, ticketUrl(guest.ticketToken!)));
+  }
   return guest;
 }
 

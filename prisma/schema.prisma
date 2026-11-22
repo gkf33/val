@@ -205,6 +205,7 @@ model Booking {
   approvedAt        DateTime?
   paymentDeadline   DateTime?
   reminderSentAt    DateTime?
+  dayReminderSentAt DateTime?
   confirmedAt       DateTime?
   adminNote         String?
   createdAt         DateTime  @default(now())
@@ -237,6 +238,7 @@ model Guest {
   ticketToken     String?     @unique
   checkedInAt     DateTime?
   checkedInDevice String?
+  checkedOutAt    DateTime?
   replacedById    String?
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt

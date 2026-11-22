@@ -6,7 +6,7 @@ Unkostenbeitrag per PayPal, QR-Code, Pflicht-Check-in an der Tür.
 Stack: Next.js 15 (App Router, TypeScript), Tailwind 4, PostgreSQL + Prisma 6,
 eigener Magic-Link-Login, Vitest, Playwright.
 
-## Stand: Phase 3
+## Stand: Phase 4
 
 | Bereich | Status |
 |---|---|
@@ -20,7 +20,10 @@ eigener Magic-Link-Login, Vitest, Playwright.
 | Zahlungsfrist | ✔ Betrag + Frist bei Freigabe festgeschrieben, Erinnerung, Ablauf, Admin-Hinweis „Platz frei“ |
 | Zahlungseingang | ✔ PayPal-Mail per Webhook, DKIM-Prüfung, Parser (de echt verifiziert, en synthetisch), Matching, Sonderfälle |
 | Zahlungen im Admin | ✔ Offen, Abweichung, Nicht zugeordnet, Erstattung, Bezahlt, Überfällig, Eingang (neu parsen), CSV-Import |
-| QR-Codes, Einlass | Phase 4 |
+| QR-Codes | ✔ pro Person, signiert (HMAC), Seite mit Adresse/Anfahrt, Teilen-Button, Mails, Erinnerung am Party-Tag |
+| Einlass | ✔ Door-Link + PIN je Party, Geräte benennbar/sperrbar, Scanner-PWA, Check-in/-out, Namenssuche, Licht, Offline-Modus |
+| Live & Export | ✔ Live-Belegung, Gästeliste als CSV und Druck/PDF mit Checkbox-Spalte |
+| Storno, Namensänderung, Sperrliste-Pflege, vertraute Gäste, Transparenz, Statistik, Löschjob | Phase 5 |
 
 ### Gäste-Flow
 
@@ -69,10 +72,24 @@ ist noch nicht mit einem echten Export geprüft.
 Die Rohmails werden gespeichert und lassen sich nach Parser-Änderungen neu verarbeiten.
 Test-Fixtures: `tests/fixtures/paypal/` (Herkunft siehe README dort).
 
+### Einlass
+
+1. Admin → Party → Einlass: Door-Link mit PIN anlegen. Gültig von Beginn − 2 h bis Ende + 6 h, jederzeit widerrufbar.
+2. Türsteher öffnen den Link, geben Gerätename + PIN ein und legen die Seite auf den Homescreen.
+3. Scan → grün (Name groß, „Ausweis prüfen“, Crew-Badge) oder rot (bereits drinnen mit Uhrzeit + Gerät,
+   nicht bezahlt, storniert, falsche Party, unbekannt, gesperrt). Erst „Einchecken“ bucht, atomar in der DB.
+   Erneuter Scan eines Gastes, der drinnen ist → „Auschecken“; danach Wiedereinlass.
+4. Offline: Der Scanner hält alle gültigen Tickets (nur als Hash) lokal vor. Ohne Netz checkt nur das
+   im Admin markierte **Offline-Hauptgerät** ein; die Aktionen werden beim nächsten Netz synchronisiert.
+   Andere Geräte zeigen offline nur an. Zusätzlich: Gästeliste drucken.
+
+Hinweise: Kamera braucht HTTPS (lokal geht `localhost`). Die Taschenlampe funktioniert auf Android Chrome,
+auf iOS Safari nicht (Browser-Einschränkung). Seed-Door-Link: `/door/tuer234567`, PIN `1234`.
+
 ### Fristen und Cron
 
 Abgelaufene Fristen werden bei jedem Aufruf von Party-Seite, Status-Seite und Admin geprüft.
-Für Erinnerungen und „Platz frei“-Mails zusätzlich alle 5 min aufrufen:
+Für Zahlungserinnerungen, „Platz frei“-Mails und die Erinnerung am Party-Tag zusätzlich alle 5 min aufrufen:
 
 ```bash
 curl -H "Authorization: Bearer $CRON_SECRET" https://<domain>/api/cron/tick
@@ -112,7 +129,7 @@ npm run test:e2e    # Playwright gegen E2E_DATABASE_URL (Name muss auf _e2e ende
 ```
 src/domain/     Reine Regeln: Statusmaschine, Kapazität, Fristen, Codes, Geld, Zeitzonen
 src/server/     DB, Auth, Mail, Audit, Kapazität mit Locking, Partys/Links
-src/app/        Seiten: /p/<slug>-<code> (Gäste), /me (Status), /admin (Backend), /auth/verify, /login, /api/cron/tick
+src/app/        Seiten: /p/<slug>-<code> (Gäste), /me (Status), /t/<code> (QR), /door/<code> (Scanner), /admin, /api/…
 src/components/ UI-Bausteine
 prisma/         Schema, Migrationen, Seed
 tests/          unit/, db/, e2e/

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { safeEqual } from "@/server/crypto";
-import { expireOverdue, sendPaymentReminders } from "@/server/expiry";
+import { expireOverdue, sendPartyDayReminders, sendPaymentReminders } from "@/server/expiry";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +18,8 @@ async function handle(req: Request) {
   const now = new Date();
   const expired = await expireOverdue(now);
   const reminders = await sendPaymentReminders(now);
-  return NextResponse.json({ ok: true, expired, reminders, at: now.toISOString() });
+  const partyDay = await sendPartyDayReminders(now);
+  return NextResponse.json({ ok: true, expired, reminders, partyDay, at: now.toISOString() });
 }
 
 export const GET = handle;

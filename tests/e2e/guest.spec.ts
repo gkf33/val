@@ -77,6 +77,15 @@ test("Gast fragt an, bestätigt, Admin gibt frei, Gast sieht Zahlung", async ({ 
   await expect(g.getByText("bezahlt").first()).toBeVisible();
   await expect(g.getByText("// zahlung")).toHaveCount(0);
 
+  // QR-Codes
+  await expect(g.getByText("// qr-codes")).toBeVisible();
+  await expect(g.getByRole("button", { name: "teilen" })).toHaveCount(1); // nur für die Begleitung
+  await g.getByRole("link", { name: "Robin E2E ▸" }).click();
+  await expect(g.getByText("EINLASS FÜR")).toBeVisible();
+  await expect(g.getByText("● gültig")).toBeVisible();
+  await expect(g.getByText("Beispielstraße 1, 80331 München")).toBeVisible();
+  await expect(g.getByRole("img", { name: "QR-Code" })).toBeVisible();
+
   await guestCtx.close();
   await adminCtx.close();
 });
@@ -101,4 +110,12 @@ test("Queue zeigt Sperrlisten-Warnung", async ({ browser }) => {
   await expect(card.getByText(/Sperrliste \(Name\)/)).toBeVisible();
   // Gast mit Warnung ist nicht vorausgewählt
   await expect(card.getByRole("checkbox")).not.toBeChecked();
+});
+
+test("QR-Code-Seite zeigt Adresse erst mit gültigem Code", async ({ browser }) => {
+  // Nach dem Bezahlen (erster Test) hat der Gast QR-Links auf /me
+  const page = await browser.newPage();
+  await page.goto("/t/ungueltig.code");
+  await expect(page.getByText("404")).toBeVisible();
+  await page.close();
 });

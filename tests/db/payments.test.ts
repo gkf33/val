@@ -76,7 +76,7 @@ describe("Zahlungseingang per Mail", () => {
     expect(r.status).toBe("payment");
     if (r.status === "payment") expect(r.payment.status).toBe("paid");
     expect(await statuses(booking.id)).toEqual(["paid", "paid"]);
-    expect(mailer.sent.at(-1)!.subject).toBe("Zahlung erhalten");
+    expect(mailer.sent.at(-1)!.subject).toBe("Zahlung erhalten · QR-Codes");
   });
 
   it("gleiche Mail zweimal → nur einmal verbucht", async () => {

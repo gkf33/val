@@ -8,7 +8,8 @@ import { config } from "./config";
 import { audit, SYSTEM } from "./audit";
 import { capacitySnapshot, transitionGuests, withPartyLock } from "./capacity";
 import { getMailer } from "./mail/mailer";
-import { expiredMail, paymentReminderMail, seatFreedAdminMail } from "./mail/templates";
+import { expiredMail, partyDayMail, paymentReminderMail, seatFreedAdminMail } from "./mail/templates";
+import { ticketUrl } from "./tickets";
 import { statusUrl } from "./bookings";
 import { canMoveUpFromWaitlist } from "@/domain/deadlines";
 
@@ -73,6 +74,30 @@ export async function sendPaymentReminders(now = new Date(), partyId?: string): 
     if (claimed.count !== 1) continue;
     await getMailer().send(paymentReminderMail(b.email, statusUrl(), b.paymentDeadline!, b.referenceCode));
     sent++;
+  }
+  return sent;
+}
+
+/** Erinnerung am Party-Tag (Europe/Berlin) mit QR-Links, Uhrzeit, Adresse. Einmal pro Buchung. */
+export async function sendPartyDayReminders(now = new Date()): Promise<number> {
+  const tz = config.timeZone;
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: tz }).format(now);
+  const parties = await prisma.party.findMany({
+    where: { status: { not: "draft" }, startsAt: { gt: now, lt: new Date(now.getTime() + 36 * 3_600_000) } },
+  });
+  let sent = 0;
+  for (const party of parties) {
+    if (new Intl.DateTimeFormat("en-CA", { timeZone: tz }).format(party.startsAt) !== today) continue;
+    const bookings = await prisma.booking.findMany({
+      where: { partyId: party.id, dayReminderSentAt: null, guests: { some: { status: "paid" } } },
+      include: { guests: { where: { status: "paid", ticketToken: { not: null } } } },
+    });
+    for (const b of bookings) {
+      const claimed = await prisma.booking.updateMany({ where: { id: b.id, dayReminderSentAt: null }, data: { dayReminderSentAt: now } });
+      if (claimed.count !== 1) continue;
+      await getMailer().send(partyDayMail(b.email, party, b.guests.map((g) => ({ name: g.name, url: ticketUrl(g.ticketToken!) }))));
+      sent++;
+    }
   }
   return sent;
 }

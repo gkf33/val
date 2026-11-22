@@ -10,6 +10,8 @@ import { STATUS_LABEL, type GuestStatus } from "@/domain/guestStatus";
 import { GhostButton, Prompt } from "@/components/ui";
 import { CopyButton } from "@/components/CopyButton";
 import { logoutAction } from "../auth/actions";
+import { ticketUrl } from "@/server/tickets";
+import { ShareButton } from "@/components/guest/ShareButton";
 
 export const dynamic = "force-dynamic";
 
@@ -130,8 +132,24 @@ export default async function MePage({ searchParams }: { searchParams: Promise<{
               </p>
             )}
 
-            {b.guests.some((g) => g.status === "paid") && (
-              <p className="text-xs text-muted">Bezahlt. QR-Codes erscheinen hier.</p>
+            {b.guests.some((g) => g.ticketToken && ["paid", "checked_in", "checked_out"].includes(g.status)) && (
+              <div className="flex flex-col gap-2">
+                <p className="text-xs text-accent-2">{"// qr-codes"}</p>
+                {b.guests
+                  .filter((g) => g.ticketToken && ["paid", "checked_in", "checked_out"].includes(g.status))
+                  .map((g) => {
+                    const url = ticketUrl(g.ticketToken!);
+                    return (
+                      <div key={g.id} className="flex items-center gap-2">
+                        <a href={url} className="flex min-h-11 flex-1 items-center border border-accent px-3 text-sm text-fg no-underline">
+                          {g.name} ▸
+                        </a>
+                        {!g.isBooker && <ShareButton url={url} name={g.name} />}
+                      </div>
+                    );
+                  })}
+                <p className="text-[11px] text-muted">Begleitungen: Link weiterleiten. Jeder Code gilt nur für die genannte Person.</p>
+              </div>
             )}
           </section>
         );

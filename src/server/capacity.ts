@@ -7,6 +7,7 @@ import type { GuestStatus as DbGuestStatus } from "@prisma/client";
 import { assertFits, freeSeats, type CapacitySnapshot } from "@/domain/capacity";
 import { OCCUPYING_STATUSES, assertTransition, needsSeat, type GuestStatus } from "@/domain/guestStatus";
 import { prisma, type Db, type Tx } from "./db";
+import { issueTickets } from "./tickets";
 
 export async function occupiedSeats(db: Db, partyId: string): Promise<number> {
   return db.guest.count({
@@ -60,4 +61,5 @@ export async function transitionGuests(
     where: { id: { in: guestIds } },
     data: { status: to as DbGuestStatus, statusChangedAt: now, ...extra },
   });
+  if (to === "paid") await issueTickets(tx, guestIds);
 }

@@ -155,12 +155,40 @@ export function seatFreedAdminMail(to: string, adminUrl: string, partyName: stri
 
 // ── Zahlungen ─────────────────────────────────────────────
 
-export function paymentReceivedMail(to: string, statusUrl: string, party: PartyInfo, guests: string[]): OutgoingMail {
+export function paymentReceivedMail(
+  to: string,
+  statusUrl: string,
+  party: PartyInfo,
+  tickets: { name: string; url: string }[],
+): OutgoingMail {
   return mail(
     to,
-    "Zahlung erhalten",
-    [`Zahlung erhalten. Bestätigt für ${when(party)}: ${names(guests)}.`, "Deine QR-Codes findest du auf der Status-Seite.", "Ausweis mitbringen."],
-    { label: "QR-CODES ▸", url: statusUrl },
+    "Zahlung erhalten · QR-Codes",
+    [
+      `Zahlung erhalten. Bestätigt für ${when(party)}: ${names(tickets.map((t) => t.name))}.`,
+      "Ein QR-Code pro Person. Begleitungen ohne eigene Mail: Link weiterleiten.",
+      ...tickets.map((t) => `${t.name}: ${t.url}`),
+      "Adresse steht auf dem QR-Code. Ausweis mitbringen.",
+    ],
+    { label: "STATUS ▸", url: statusUrl },
+  );
+}
+
+export function ticketMail(to: string, party: PartyInfo, name: string, url: string): OutgoingMail {
+  return mail(to, "Dein QR-Code", [`Einlass ${when(party)} für ${name}.`, "Nicht übertragbar. Ausweis mitbringen."], { label: "QR-CODE ▸", url });
+}
+
+export function partyDayMail(to: string, party: PartyInfo & { address?: string | null; directions?: string | null }, tickets: { name: string; url: string }[]): OutgoingMail {
+  return mail(
+    to,
+    "Heute.",
+    [
+      `Heute ab ${formatTime(party.startsAt, TZ())}.`,
+      ...(party.address ? [`Ort: ${party.address}`] : []),
+      ...(party.directions ? [party.directions] : []),
+      ...tickets.map((t) => `${t.name}: ${t.url}`),
+      "Bildschirmhelligkeit hoch. Ausweis mitbringen.",
+    ],
   );
 }
 

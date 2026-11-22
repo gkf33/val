@@ -10,7 +10,8 @@ import { config } from "../config";
 import { audit, SYSTEM, type Actor } from "../audit";
 import { capacitySnapshot, transitionGuests, withPartyLock } from "../capacity";
 import { getMailer } from "../mail/mailer";
-import { paymentReceivedMail, restRequestMail } from "../mail/templates";
+import { paymentReceivedMail, restRequestMail, ticketMail } from "../mail/templates";
+import { ticketUrl } from "../tickets";
 import { statusUrl } from "../bookings";
 
 export interface PaymentInput {
@@ -171,7 +172,12 @@ export async function applyPayment(
 
 async function sendPaidMail(bookingId: string) {
   const b = await prisma.booking.findUniqueOrThrow({ where: { id: bookingId }, include: { party: true, guests: { where: { status: "paid" } } } });
-  await getMailer().send(paymentReceivedMail(b.email, statusUrl(), b.party, b.guests.map((g) => g.name)));
+  const tickets = b.guests.filter((g) => g.ticketToken).map((g) => ({ name: g.name, url: ticketUrl(g.ticketToken!), email: g.email, isBooker: g.isBooker }));
+  await getMailer().send(paymentReceivedMail(b.email, statusUrl(), b.party, tickets));
+  // Begleitungen mit eigener E-Mail bekommen ihren QR-Code direkt
+  for (const t of tickets) {
+    if (!t.isBooker && t.email && t.email !== b.email) await getMailer().send(ticketMail(t.email, b.party, t.name, t.url));
+  }
 }
 
 // ── Admin-Aktionen ────────────────────────────────────────
