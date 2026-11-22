@@ -1,0 +1,56 @@
+@import "tailwindcss";
+
+/* Design-Tokens: Variante A „Violett“. Alle Farben/Schriften nur hier ändern. */
+@theme {
+  --color-bg: #07070a;
+  --color-surface: #0b0b10;
+  --color-surface-2: #0e0e14;
+  --color-line: #1e1e2a;
+  --color-line-2: #262636;
+  --color-line-3: #3a3a52;
+  --color-fg: #e6e6ee;
+  --color-fg-2: #b4b4c2;
+  --color-muted: #8a8a9a;
+  --color-faint: #5e5e70;
+  --color-accent: #8b7cf6;
+  --color-accent-2: #a99cff;
+  --color-accent-dim: #6e64b8;
+  --color-on-accent: #0a0a0f;
+  --color-warn: #f5a524;
+  --color-ok: #16a34a;
+  --color-ok-2: #4ade80;
+  --color-bad: #dc2626;
+
+  --font-mono: "Cascadia Code", var(--font-jetbrains), Consolas, ui-monospace, monospace;
+  --font-sans: var(--font-inter), system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body {
+  background: var(--color-bg);
+  color: var(--color-fg);
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+}
+
+/* In @layer base, damit Tailwind-Utilities (z. B. text-on-accent) gewinnen. */
+@layer base {
+  input[type="checkbox"] {
+    accent-color: var(--color-accent);
+  }
+
+  a {
+    color: var(--color-accent-2);
+  }
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}

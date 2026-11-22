@@ -1,0 +1,348 @@
+// Guestlist – Datenmodell
+// Zentrale Regeln (Statusmaschine, Kapazität, Fristen) liegen in src/domain.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum PartyStatus {
+  draft
+  open
+  closed
+}
+
+enum LinkType {
+  public
+  inviter
+  door
+}
+
+enum GuestType {
+  guest
+  crew
+}
+
+enum GuestStatus {
+  pending_email
+  requested
+  waitlisted
+  rejected
+  approved_unpaid
+  payment_mismatch
+  paid
+  checked_in
+  checked_out
+  expired
+  cancelled
+  replaced
+}
+
+enum TokenPurpose {
+  login
+  confirm_booking
+}
+
+enum NameChangeStatus {
+  pending
+  approved
+  rejected
+}
+
+enum PaymentSource {
+  email
+  csv
+  imap
+  manual
+}
+
+enum PaymentState {
+  matched
+  suggested
+  unmatched
+  late
+  refund_due
+  refunded
+}
+
+enum MatchType {
+  reference
+  unique_amount
+  name_amount
+  manual
+}
+
+enum RefundStatus {
+  due
+  refunded
+}
+
+enum ActorType {
+  admin
+  door
+  guest
+  system
+}
+
+model Account {
+  id        String    @id @default(cuid())
+  email     String    @unique
+  name      String?
+  trusted   Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  bookings  Booking[]
+  sessions  Session[]
+}
+
+model Session {
+  id         String   @id @default(cuid())
+  tokenHash  String   @unique
+  accountId  String
+  account    Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  lastSeenAt DateTime @default(now())
+
+  @@index([accountId])
+}
+
+/// Einmal-Token für Magic-Links. Gespeichert wird nur der SHA-256-Hash.
+model LoginToken {
+  id        String       @id @default(cuid())
+  tokenHash String       @unique
+  email     String
+  purpose   TokenPurpose
+  bookingId String?
+  redirect  String?
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime     @default(now())
+
+  @@index([email, createdAt])
+}
+
+model Party {
+  id                     String      @id @default(cuid())
+  name                   String
+  slug                   String      @unique
+  status                 PartyStatus @default(draft)
+  startsAt               DateTime
+  endsAt                 DateTime
+  /// Anmeldeschluss (optional, sonst Partybeginn)
+  registrationClosesAt   DateTime?
+  /// Zahlungen akzeptiert bis (optional, sonst Partybeginn − PAYMENT_CUTOFF_HOURS)
+  paymentsAcceptedUntil  DateTime?
+  /// Zahlungsfrist nach Freigabe in Minuten
+  paymentDeadlineMinutes Int         @default(60)
+  capacity               Int         @default(250)
+  feeCents               Int
+  maxGroupSize           Int         @default(5)
+  city                   String?
+  /// Wird erst auf dem QR-Code-Screen angezeigt
+  address                String?
+  directions             String?
+  info                   String?
+  transparencyPublic     Boolean     @default(false)
+  createdAt              DateTime    @default(now())
+  updatedAt              DateTime    @updatedAt
+
+  links    PartyLink[]
+  bookings Booking[]
+  guests   Guest[]
+  costs    PartyCost[]
+  devices  DoorDevice[]
+}
+
+model PartyCost {
+  id          String   @id @default(cuid())
+  partyId     String
+  party       Party    @relation(fields: [partyId], references: [id], onDelete: Cascade)
+  label       String
+  amountCents Int
+  createdAt   DateTime @default(now())
+}
+
+model PartyLink {
+  id           String    @id @default(cuid())
+  partyId      String
+  party        Party     @relation(fields: [partyId], references: [id], onDelete: Cascade)
+  type         LinkType
+  code         String    @unique
+  inviterLabel String?
+  pinHash      String?
+  validFrom    DateTime?
+  validTo      DateTime?
+  active       Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  deactivatedAt DateTime?
+
+  bookings Booking[]
+  devices  DoorDevice[]
+
+  @@index([partyId, type])
+}
+
+model Booking {
+  id                String    @id @default(cuid())
+  partyId           String
+  party             Party     @relation(fields: [partyId], references: [id], onDelete: Cascade)
+  /// Gesetzt, sobald die E-Mail bestätigt ist
+  accountId         String?
+  account           Account?  @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  email             String
+  bookerName        String
+  bookerAttends     Boolean   @default(true)
+  viaLinkId         String?
+  viaLink           PartyLink? @relation(fields: [viaLinkId], references: [id], onDelete: SetNull)
+  referenceCode     String    @unique
+  lockedAmountCents Int?
+  approvedAt        DateTime?
+  paymentDeadline   DateTime?
+  reminderSentAt    DateTime?
+  confirmedAt       DateTime?
+  adminNote         String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  guests   Guest[]
+  payments Payment[]
+  refunds  Refund[]
+
+  @@index([partyId])
+  @@index([accountId])
+}
+
+model Guest {
+  id              String      @id @default(cuid())
+  partyId         String
+  party           Party       @relation(fields: [partyId], references: [id], onDelete: Cascade)
+  /// Crew hat keine Buchung
+  bookingId       String?
+  booking         Booking?    @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  name            String
+  email           String?
+  isBooker        Boolean     @default(false)
+  adultConfirmed  Boolean     @default(false)
+  type            GuestType   @default(guest)
+  /// Freitext für Crew, z. B. „DJ“, „Bar“
+  role            String?
+  status          GuestStatus @default(pending_email)
+  statusChangedAt DateTime    @default(now())
+  ticketToken     String?     @unique
+  checkedInAt     DateTime?
+  checkedInDevice String?
+  replacedById    String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  nameChanges NameChangeRequest[]
+
+  @@index([partyId, status])
+  @@index([bookingId])
+}
+
+model NameChangeRequest {
+  id             String           @id @default(cuid())
+  guestId        String
+  guest          Guest            @relation(fields: [guestId], references: [id], onDelete: Cascade)
+  newName        String
+  newEmail       String?
+  adultConfirmed Boolean
+  status         NameChangeStatus @default(pending)
+  createdAt      DateTime         @default(now())
+  decidedAt      DateTime?
+}
+
+model InboundEmail {
+  id         String    @id @default(cuid())
+  receivedAt DateTime  @default(now())
+  provider   String
+  messageId  String?   @unique
+  fromAddr   String?
+  subject    String?
+  raw        String
+  dkimValid  Boolean   @default(false)
+  dkimDomain String?
+  kind       String?
+  parsedAt   DateTime?
+  parseError String?
+  payments   Payment[]
+}
+
+model Payment {
+  id               String        @id @default(cuid())
+  paypalTxId       String        @unique
+  grossCents       Int
+  feeCents         Int?
+  currency         String        @default("EUR")
+  senderName       String?
+  senderEmail      String?
+  note             String?
+  paidAt           DateTime?
+  source           PaymentSource
+  inboundEmailId   String?
+  inboundEmail     InboundEmail? @relation(fields: [inboundEmailId], references: [id], onDelete: SetNull)
+  matchedBookingId String?
+  matchedBooking   Booking?      @relation(fields: [matchedBookingId], references: [id], onDelete: SetNull)
+  matchType        MatchType?
+  state            PaymentState
+  adminNote        String?
+  createdAt        DateTime      @default(now())
+  refunds          Refund[]
+}
+
+model Refund {
+  id          String       @id @default(cuid())
+  bookingId   String?
+  booking     Booking?     @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  paymentId   String?
+  payment     Payment?     @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  amountCents Int
+  recipient   String
+  reason      String
+  status      RefundStatus @default(due)
+  refundedAt  DateTime?
+  createdAt   DateTime     @default(now())
+}
+
+model Blocklist {
+  id        String   @id @default(cuid())
+  name      String?
+  email     String?
+  reason    String?
+  createdAt DateTime @default(now())
+}
+
+model DoorDevice {
+  id             String    @id @default(cuid())
+  partyId        String
+  party          Party     @relation(fields: [partyId], references: [id], onDelete: Cascade)
+  linkId         String
+  link           PartyLink @relation(fields: [linkId], references: [id], onDelete: Cascade)
+  name           String
+  tokenHash      String    @unique
+  offlinePrimary Boolean   @default(false)
+  lastSeenAt     DateTime?
+  revokedAt      DateTime?
+  createdAt      DateTime  @default(now())
+}
+
+model AuditLog {
+  id         String    @id @default(cuid())
+  createdAt  DateTime  @default(now())
+  actorType  ActorType
+  actorLabel String
+  action     String
+  entityType String?
+  entityId   String?
+  partyId    String?
+  data       Json?
+
+  @@index([partyId, createdAt])
+  @@index([createdAt])
+}
