@@ -14,6 +14,10 @@ import {
   regenerateLink,
   updateParty,
 } from "@/server/parties";
+import { ApprovalError, addCrew, approveGuests, rejectGuests, removeCrew, waitlistGuests } from "@/server/approval";
+import { CapacityError } from "@/domain/capacity";
+import { TransitionError } from "@/domain/guestStatus";
+
 
 export async function adminLoginAction(formData: FormData) {
   try {
@@ -76,4 +80,73 @@ export async function deactivateLinkAction(partyId: string, linkId: string) {
 export async function regenerateLinkAction(partyId: string, linkId: string) {
   await regenerateLink(await actor(), linkId);
   revalidatePath(`/admin/parties/${partyId}`);
+}
+
+// ── Queue ─────────────────────────────────────────────────
+
+
+function queueUrl(partyId: string, tab: string, params: Record<string, string>) {
+  const q = new URLSearchParams({ party: partyId, tab, ...params });
+  return `/admin/queue?${q.toString()}`;
+}
+
+function friendly(e: unknown): string | null {
+  if (e instanceof CapacityError) return `Nicht genug Plätze: ${e.requested} gewählt, ${e.free} frei`;
+  if (e instanceof ApprovalError) return e.message;
+  if (e instanceof TransitionError) return "Status hat sich geändert. Seite neu laden.";
+  return null;
+}
+
+/**
+ * Ein Formular für die ganze Queue. `op` = approve|reject|waitlist[:bookingId].
+ * Checkbox-Werte: `<bookingId>:<guestId>`.
+ */
+export async function queueAction(partyId: string, tab: string, formData: FormData) {
+  const a = await actor();
+  const op = String(formData.get("op") ?? "");
+  const [verb, bookingId] = op.split(":");
+  const picked = formData
+    .getAll("guest")
+    .map(String)
+    .map((v) => v.split(":"))
+    .filter(([b]) => !bookingId || b === bookingId)
+    .map(([, g]) => g);
+  if (picked.length === 0) redirect(queueUrl(partyId, tab, { err: "Keine Gäste ausgewählt" }));
+
+  try {
+    if (verb === "approve") await approveGuests(a, partyId, picked);
+    else if (verb === "reject") {
+      const msg = bookingId ? String(formData.get(`msg-${bookingId}`) ?? "") : String(formData.get("msg-bulk") ?? "");
+      await rejectGuests(a, partyId, picked, msg);
+    } else if (verb === "waitlist") await waitlistGuests(a, partyId, picked);
+    else throw new Error("Unbekannte Aktion");
+  } catch (e) {
+    const m = friendly(e);
+    if (m) redirect(queueUrl(partyId, tab, { err: m }));
+    throw e;
+  }
+  revalidatePath("/admin");
+  const label = { approve: "freigegeben", reject: "abgelehnt", waitlist: "auf Warteliste" }[verb] ?? "";
+  redirect(queueUrl(partyId, tab, { ok: `${picked.length} ${label}` }));
+}
+
+export async function addCrewAction(partyId: string, formData: FormData) {
+  const a = await actor();
+  try {
+    await addCrew(a, partyId, {
+      name: String(formData.get("name") ?? ""),
+      role: String(formData.get("role") ?? ""),
+      email: String(formData.get("email") ?? ""),
+    });
+  } catch (e) {
+    const m = friendly(e);
+    if (m) redirect(`/admin/parties/${partyId}/crew?err=${encodeURIComponent(m)}`);
+    throw e;
+  }
+  revalidatePath(`/admin/parties/${partyId}/crew`);
+}
+
+export async function removeCrewAction(partyId: string, guestId: string) {
+  await removeCrew(await actor(), partyId, guestId);
+  revalidatePath(`/admin/parties/${partyId}/crew`);
 }

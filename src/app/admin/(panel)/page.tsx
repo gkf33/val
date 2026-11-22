@@ -5,6 +5,7 @@ import { occupancyByParty } from "@/server/stats";
 import { formatDateTime } from "@/domain/time";
 import { formatEuro } from "@/domain/money";
 import { OccupancyBar } from "@/components/admin/OccupancyBar";
+import { expireOverdue } from "@/server/expiry";
 
 const STATUS: Record<string, { label: string; cls: string }> = {
   draft: { label: "Entwurf", cls: "border border-line-3 text-fg-2" },
@@ -12,17 +13,18 @@ const STATUS: Record<string, { label: string; cls: string }> = {
   closed: { label: "Geschlossen", cls: "bg-line-2 text-fg-2" },
 };
 
-function Tile({ label, value, tone }: { label: string; value: number; tone?: "accent" | "warn" }) {
+function Tile({ label, value, tone, href }: { label: string; value: number; tone?: "accent" | "warn"; href: string }) {
   const color = tone === "accent" && value > 0 ? "text-accent-2" : tone === "warn" && value > 0 ? "text-warn" : "text-fg";
   return (
-    <div className="flex flex-col gap-1 border border-line p-3">
+    <Link href={href} className="flex flex-col gap-1 border border-line p-3 no-underline hover:border-accent">
       <span className="text-[11px] tracking-wide text-muted uppercase">{label}</span>
       <span className={`text-2xl font-bold ${color}`}>{value}</span>
-    </div>
+    </Link>
   );
 }
 
 export default async function AdminHome() {
+  await expireOverdue();
   const parties = await prisma.party.findMany({ orderBy: { startsAt: "desc" } });
   const occ = await occupancyByParty(parties.map((p) => p.id));
   const [unmatched, refundsDue] = await Promise.all([
@@ -37,10 +39,10 @@ export default async function AdminHome() {
   return (
     <div className="flex flex-col gap-6">
       <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
-        <Tile label="Anfragen" value={totals.requested} tone="accent" />
-        <Tile label="Warteliste" value={totals.waitlisted} />
-        <Tile label="Nicht zugeordnet" value={unmatched} tone="warn" />
-        <Tile label="Erstattung nötig" value={refundsDue} tone="warn" />
+        <Tile label="Anfragen" value={totals.requested} tone="accent" href="/admin/queue" />
+        <Tile label="Warteliste" value={totals.waitlisted} href="/admin/queue?tab=waitlist" />
+        <Tile label="Nicht zugeordnet" value={unmatched} tone="warn" href="/admin/payments?tab=unmatched" />
+        <Tile label="Erstattung nötig" value={refundsDue} tone="warn" href="/admin/payments?tab=refunds" />
       </div>
 
       <div className="flex items-center justify-between">

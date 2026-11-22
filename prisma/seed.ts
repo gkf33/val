@@ -3,7 +3,14 @@
  * Admin: erste Adresse aus ADMIN_EMAILS.
  */
 import { PrismaClient, type GuestStatus } from "@prisma/client";
+import { randomBytes, scryptSync } from "node:crypto";
 import { generateLinkCode, generateReferenceCode } from "../src/domain/codes";
+
+const token = () => randomBytes(18).toString("base64url");
+function hashPin(pin: string) {
+  const salt = randomBytes(16).toString("hex");
+  return `${salt}:${scryptSync(pin, salt, 32).toString("hex")}`;
+}
 
 const prisma = new PrismaClient();
 const DAY = 86_400_000;
@@ -67,7 +74,7 @@ async function main() {
 
   // Crew
   for (const [name, role] of [["DJ Nord", "DJ"], ["Mira", "Bar"], ["Tom", "Host"]] as const) {
-    await prisma.guest.create({ data: { partyId: party.id, name, type: "crew", role, status: "paid", adultConfirmed: true } });
+    await prisma.guest.create({ data: { partyId: party.id, name, type: "crew", role, status: "paid", adultConfirmed: true, ticketToken: token() } });
   }
 
   // Beispielbuchungen in verschiedenen Status
@@ -101,17 +108,31 @@ async function main() {
             email: i === 0 ? s.email : null,
             adultConfirmed: true,
             status: s.status,
+            ticketToken: s.status === "paid" ? token() : null,
           })),
         },
       },
     });
   }
 
+  // Door-Link (PIN 1234), gültig ab sofort bis Partyende + 6 h
+  await prisma.partyLink.create({
+    data: {
+      partyId: party.id,
+      type: "door",
+      code: "tuer234567",
+      pinHash: hashPin("1234"),
+      validFrom: new Date(Date.now() - 3_600_000),
+      validTo: new Date(party.endsAt.getTime() + 6 * 3_600_000),
+    },
+  });
+
   await prisma.blocklist.create({ data: { name: "Max Ärger", reason: "Beispiel-Eintrag" } });
 
   console.log("Seed fertig.");
   console.log(`  Admin:      ${adminEmail}  → http://localhost:3000/admin/login`);
   console.log(`  Party-Link: http://localhost:3000/p/nacht-07-zugang23`);
+  console.log(`  Door:       http://localhost:3000/door/tuer234567  (PIN 1234)`);
 }
 
 main()

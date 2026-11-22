@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/server/db";
 import { config } from "@/server/config";
@@ -7,6 +8,7 @@ import { utcToLocalInput, formatDateTime } from "@/domain/time";
 import { PartyForm } from "@/components/admin/PartyForm";
 import { OccupancyBar } from "@/components/admin/OccupancyBar";
 import { CopyButton } from "@/components/CopyButton";
+import { DoorSection } from "@/components/admin/DoorSection";
 import {
   createInviterLinkAction,
   createPublicLinkAction,
@@ -15,8 +17,9 @@ import {
   updatePartyAction,
 } from "@/app/admin/actions";
 
-export default async function PartyPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function PartyPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ doorErr?: string }> }) {
   const { id } = await params;
+  const { doorErr } = await searchParams;
   const party = await prisma.party.findUnique({
     where: { id },
     include: { links: { where: { type: { in: ["public", "inviter"] } }, orderBy: { createdAt: "asc" } } },
@@ -34,8 +37,19 @@ export default async function PartyPage({ params }: { params: Promise<{ id: stri
         <p className="text-xs text-muted">{formatDateTime(party.startsAt, tz)} – {formatDateTime(party.endsAt, tz)}</p>
       </div>
 
-      <section className="border border-line p-4">
+      <section className="flex flex-col gap-4 border border-line p-4">
         <OccupancyBar o={occ} />
+        <div className="flex flex-wrap gap-2 text-sm">
+          <Link href={`/admin/queue?party=${party.id}`} className="flex min-h-11 items-center border border-line-3 px-3 text-fg no-underline hover:border-accent">
+            Anfragen ({occ.requested})
+          </Link>
+          <Link href={`/admin/queue?party=${party.id}&tab=waitlist`} className="flex min-h-11 items-center border border-line-3 px-3 text-fg no-underline hover:border-accent">
+            Warteliste ({occ.waitlisted})
+          </Link>
+          <Link href={`/admin/parties/${party.id}/crew`} className="flex min-h-11 items-center border border-line-3 px-3 text-fg no-underline hover:border-accent">
+            Crew ({occ.crew})
+          </Link>
+        </div>
       </section>
 
       <section className="flex flex-col gap-3">
@@ -99,6 +113,8 @@ export default async function PartyPage({ params }: { params: Promise<{ id: stri
           </details>
         )}
       </section>
+
+      <DoorSection partyId={party.id} error={doorErr} />
 
       <section className="flex flex-col gap-4">
         <h2 className="text-sm font-semibold">Einstellungen</h2>

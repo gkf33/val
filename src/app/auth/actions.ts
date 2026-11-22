@@ -1,14 +1,14 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { completeLogin } from "@/server/auth/login";
+import { redeemToken } from "@/server/auth/redeem";
 import { createSession, destroySession } from "@/server/auth/session";
 
 export async function verifyAction(formData: FormData) {
   const token = String(formData.get("token") ?? "");
-  const result = await completeLogin(token);
+  const result = await redeemToken(token);
   if (!result) redirect("/auth/verify?invalid=1");
-  await createSession(result.account.id);
+  await createSession(result.accountId);
   redirect(result.redirect);
 }
 

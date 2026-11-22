@@ -8,6 +8,8 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  // Direkte Verbindung für Migrationen (bei Neon: ungepoolte URL); lokal identisch mit DATABASE_URL
+  directUrl = env("DATABASE_URL_UNPOOLED")
 }
 
 enum PartyStatus {
@@ -67,6 +69,7 @@ enum PaymentState {
   late
   refund_due
   refunded
+  ignored
 }
 
 enum MatchType {
@@ -204,6 +207,7 @@ model Booking {
   approvedAt        DateTime?
   paymentDeadline   DateTime?
   reminderSentAt    DateTime?
+  dayReminderSentAt DateTime?
   confirmedAt       DateTime?
   adminNote         String?
   createdAt         DateTime  @default(now())
@@ -236,6 +240,7 @@ model Guest {
   ticketToken     String?     @unique
   checkedInAt     DateTime?
   checkedInDevice String?
+  checkedOutAt    DateTime?
   replacedById    String?
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-export function CopyButton({ value, label = "Kopieren" }: { value: string; label?: string }) {
+export function CopyButton({ value, label = "Kopieren", className }: { value: string; label?: string; className?: string }) {
   const [done, setDone] = useState(false);
   return (
     <button
@@ -12,7 +12,7 @@ export function CopyButton({ value, label = "Kopieren" }: { value: string; label
         setDone(true);
         setTimeout(() => setDone(false), 1500);
       }}
-      className="min-h-11 shrink-0 border border-line-3 px-3 text-xs text-fg hover:border-accent"
+      className={className ?? "min-h-11 shrink-0 border border-line-3 px-3 text-xs text-fg hover:border-accent"}
     >
       {done ? "Kopiert ✓" : label}
     </button>

@@ -6,7 +6,9 @@ export const dynamic = "force-dynamic";
 
 const NAV = [
   { href: "/admin", label: "Übersicht" },
-  { href: "/admin/parties/new", label: "Neue Party" },
+  { href: "/admin/queue", label: "Freigabe" },
+  { href: "/admin/payments", label: "Zahlungen" },
+  { href: "/admin/parties/new", label: "+ Party" },
   { href: "/admin/audit", label: "Log" },
 ];
 
@@ -35,7 +37,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         </div>
       </header>
       <main className="mx-auto max-w-5xl px-5 pt-5 pb-28 md:pb-10">{children}</main>
-      <nav className="fixed inset-x-0 bottom-0 z-10 grid grid-cols-3 border-t border-line bg-bg pb-[env(safe-area-inset-bottom)] text-xs md:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-10 grid grid-cols-5 border-t border-line bg-bg pb-[env(safe-area-inset-bottom)] text-xs md:hidden">
         {NAV.map((n) => (
           <Link key={n.href} href={n.href} className="flex min-h-14 items-center justify-center text-fg-2 no-underline">
             {n.label}

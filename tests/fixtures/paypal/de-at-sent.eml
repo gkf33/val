@@ -1,0 +1,19 @@
+From: "service@paypal.at" <service@paypal.at>
+To: Max Mustermann <party@pay.example.org>
+Subject: Sie haben eine Zahlung gesendet
+Date: Sun, 15 Nov 2026 06:44:25 -0800
+Message-ID: <de-at-sent@paypal.example>
+X-Email-Type-Id: RT000417
+MIME-Version: 1.0
+Content-Type: text/html; charset="UTF-8"
+Content-Transfer-Encoding: 8bit
+
+<html><body><table><tbody><tr><td><span>Sie haben eine Zahlung gesendet</span></td></tr>
+<tr><td><span>Hallo Max Mustermann!</span></td></tr>
+<tr><td><span>Sie haben 21,00&nbsp;EUR an Erika Beispiel gesendet</span></td></tr>
+<tr><td><span><strong>Transaktionscode</strong><br>7GS00000000000000</span></td></tr>
+<tr><td><span>Geld gesendet</span></td></tr>
+<tr><td><span>21,00 EUR</span></td></tr>
+<tr><td><span>Gebühr</span></td></tr>
+<tr><td><span>0,00 EUR</span></td></tr>
+</tbody></table></body></html>

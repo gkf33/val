@@ -1,0 +1,20 @@
+From: "service@paypal.at" <service@paypal.at>
+To: Max Mustermann <party@pay.example.org>
+Subject: Sie haben eine Zahlung erhalten
+Date: Sun, 15 Nov 2026 06:44:25 -0800
+Message-ID: <de-received-multiline-note@paypal.example>
+X-Email-Type-Id: PPC000955
+MIME-Version: 1.0
+Content-Type: text/html; charset="UTF-8"
+Content-Transfer-Encoding: 8bit
+
+<html><body><table><tbody><tr><td><span>Max Mustermann, Sie haben €&nbsp;60,07&nbsp;EUR erhalten</span></td></tr>
+<tr><td><span>Hallo Max Mustermann!</span></td></tr>
+<tr><td><span>Jörg Groß-Müller hat Ihnen €&nbsp;60,07&nbsp;EUR gesendet</span></td></tr>
+<tr><td><span>Transaktionsdetails</span></td></tr>
+<tr><td><span><strong>Transaktionscode</strong><br>5KL11111AB2222233</span></td></tr>
+<tr><td><span><strong>Transaktionsdatum</strong><br>1. Dezember 2026</span></td></tr>
+<tr><td><span><strong>Erhaltener Betrag</strong><br>€&nbsp;60,07&nbsp;EUR</span></td></tr>
+<tr><td><span><strong>Mitteilung von Jörg Groß-Müller</strong><br>danke! code: 7kq m4x</span></td></tr>
+<tr><td><span>Sie sehen das Geld nicht in Ihrem Konto?</span></td></tr>
+</tbody></table></body></html>

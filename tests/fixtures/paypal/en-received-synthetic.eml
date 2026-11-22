@@ -1,0 +1,20 @@
+From: "service@paypal.at" <service@paypal.at>
+To: Max Mustermann <party@pay.example.org>
+Subject: You received a payment
+Date: Sun, 15 Nov 2026 06:44:25 -0800
+Message-ID: <en-received-synthetic@paypal.example>
+X-Email-Type-Id: PPC000955
+MIME-Version: 1.0
+Content-Type: text/html; charset="UTF-8"
+Content-Transfer-Encoding: 8bit
+
+<html><body><table><tbody><tr><td><span>Max Mustermann, you've received €20.00 EUR</span></td></tr>
+<tr><td><span>Hi Max Mustermann,</span></td></tr>
+<tr><td><span>Erika Beispiel sent you €20.00 EUR</span></td></tr>
+<tr><td><span>Transaction details</span></td></tr>
+<tr><td><span><strong>Transaction ID</strong><br>6MN22222CD3333344</span></td></tr>
+<tr><td><span><strong>Transaction date</strong><br>December 1, 2026</span></td></tr>
+<tr><td><span><strong>Amount received</strong><br>€20.00 EUR</span></td></tr>
+<tr><td><span><strong>Note from Erika Beispiel</strong><br>BZ5-HWS</span></td></tr>
+<tr><td><span>Don't see the money in your account?</span></td></tr>
+</tbody></table></body></html>

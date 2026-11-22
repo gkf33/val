@@ -23,3 +23,15 @@ export async function waitForLink(email: string, count = 1): Promise<string> {
   }
   throw new Error(`Keine Mail an ${email}`);
 }
+
+/** Meldet einen Admin per Magic-Link an. */
+export async function loginAdmin(page: import("@playwright/test").Page, email = "admin@example.com") {
+  const before = mailsTo(email).length;
+  await page.goto("/admin/login");
+  await page.getByLabel("E-Mail").fill(email);
+  await page.getByRole("button", { name: "Link senden" }).click();
+  await page.getByText("Wenn die Adresse berechtigt ist").waitFor();
+  await page.goto(await waitForLink(email, before + 1));
+  await page.getByRole("button", { name: "WEITER ▸" }).click();
+  await page.getByRole("heading", { name: "Partys" }).waitFor();
+}

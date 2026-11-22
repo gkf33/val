@@ -1,3 +1,4 @@
+import type { LoginToken } from "@prisma/client";
 import { prisma } from "../db";
 import { config, isAdminEmail } from "../config";
 import { getMailer } from "../mail/mailer";
@@ -26,6 +27,10 @@ export async function requestLogin(rawEmail: string, scope: "admin" | "guest"): 
 export async function completeLogin(token: string) {
   const row = await consumeMagicToken(token);
   if (!row || row.purpose !== "login") return null;
+  return completeLoginFromToken(row);
+}
+
+export async function completeLoginFromToken(row: LoginToken) {
   const account = await prisma.account.upsert({
     where: { email: row.email },
     update: {},
