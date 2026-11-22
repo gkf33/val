@@ -6,7 +6,7 @@ Unkostenbeitrag per PayPal, QR-Code, Pflicht-Check-in an der Tür.
 Stack: Next.js 15 (App Router, TypeScript), Tailwind 4, PostgreSQL + Prisma 6,
 eigener Magic-Link-Login, Vitest, Playwright.
 
-## Stand: Phase 2
+## Stand: Phase 3
 
 | Bereich | Status |
 |---|---|
@@ -18,7 +18,9 @@ eigener Magic-Link-Login, Vitest, Playwright.
 | Gäste-Flow | ✔ Formular mit Begleitpersonen, E-Mail-Bestätigung, Status-Seite mit Zahlungsinfos |
 | Freigabe | ✔ ganze Gruppe, einzelne Gäste, Bulk; Warnungen für Duplikate und Sperrliste; Historie; Ablehnen mit Nachricht |
 | Zahlungsfrist | ✔ Betrag + Frist bei Freigabe festgeschrieben, Erinnerung, Ablauf, Admin-Hinweis „Platz frei“ |
-| Zahlungseingang (PayPal-Mails) | Phase 3 |
+| Zahlungseingang | ✔ PayPal-Mail per Webhook, DKIM-Prüfung, Parser (de echt verifiziert, en synthetisch), Matching, Sonderfälle |
+| Zahlungen im Admin | ✔ Offen, Abweichung, Nicht zugeordnet, Erstattung, Bezahlt, Überfällig, Eingang (neu parsen), CSV-Import |
+| QR-Codes, Einlass | Phase 4 |
 
 ### Gäste-Flow
 
@@ -26,6 +28,46 @@ eigener Magic-Link-Login, Vitest, Playwright.
    Wiederkehrende Gäste (eingeloggt) bekommen Name, E-Mail und frühere Begleitungen vorgeschlagen.
 2. Bestätigungsmail (Link 24 h gültig). Erst danach: `requested`, oder `waitlisted`, wenn nicht genug Plätze frei sind.
 3. `/me`: Status je Person; nach Freigabe Betrag, Frist, Referenzcode und PayPal-Button (`PAYPAL_ME_USER`).
+
+### Zahlungen
+
+Gäste zahlen per PayPal.me-Link (Freunde & Familie) und geben ihren Referenzcode als Mitteilung an.
+PayPal schickt dem Party-Konto die Mail „Sie haben eine Zahlung erhalten“; sie wird an die App weitergeleitet.
+
+Zuordnung in dieser Reihenfolge:
+
+1. **Referenzcode** in der Mitteilung (tolerant: Groß/Klein, Leerzeichen, Bindestrich) → automatisch
+2. **Cent-genauer Betrag** (`UNIQUE_CENT_AMOUNTS=true`, z. B. 40,07 €) → automatisch
+3. **Name + Betrag** → nur Vorschlag, Admin bestätigt
+
+Automatisch verbucht wird nur mit gültiger DKIM-Signatur einer erlaubten PayPal-Domain und ohne
+abgezogene Gebühr. Alles andere landet unter „Nicht zugeordnet“.
+
+| Fall | Ergebnis |
+|---|---|
+| Betrag passt | Gäste `paid`, Mail „Zahlung erhalten“ |
+| Teil- oder Überzahlung | `payment_mismatch`; Admin: akzeptieren, Rest nachfordern oder Differenz erstatten |
+| Frist abgelaufen, Platz frei | „verspätet“, Reaktivierung per Klick |
+| Frist abgelaufen ohne Platz, storniert, abgelehnt, Warteliste, doppelt | „Erstattung nötig“ |
+| Transaktions-ID schon bekannt (Mail doppelt, CSV) | wird übersprungen |
+
+#### Einrichtung Mail-Eingang (sobald Domain und Konto stehen)
+
+1. Subdomain für das PayPal-Konto, z. B. `pay.<domain>`; PayPal-Konto auf `party@pay.<domain>` registrieren.
+2. [Postmark](https://postmarkapp.com/) Inbound-Server anlegen, MX-Eintrag von `pay.<domain>` auf Postmark setzen
+   (genaue Werte zeigt Postmark an).
+3. In Postmark „Include raw email content in JSON payload“ aktivieren (sonst keine DKIM-Prüfung).
+4. Webhook-URL: `https://<domain>/api/inbound/postmark?token=<INBOUND_WEBHOOK_SECRET>`
+   (oder Basic Auth mit `INBOUND_BASIC_USER`/`INBOUND_BASIC_PASS`).
+5. Testzahlung über 1 € mit Code als Mitteilung schicken und unter Admin → Zahlungen → Eingang prüfen.
+
+Anderer Provider: Rohmail per `POST /api/inbound/raw` mit `Authorization: Bearer <INBOUND_WEBHOOK_SECRET>`.
+
+Kontrolle: PayPal-Aktivitätenexport (CSV) unter Admin → Zahlungen → CSV-Import. Die Spaltenzuordnung
+ist noch nicht mit einem echten Export geprüft.
+
+Die Rohmails werden gespeichert und lassen sich nach Parser-Änderungen neu verarbeiten.
+Test-Fixtures: `tests/fixtures/paypal/` (Herkunft siehe README dort).
 
 ### Fristen und Cron
 
@@ -92,5 +134,9 @@ Gäste-Seiten nutzen die Terminal-Schrift, das Admin-Backend Inter.
 
 ## Noch offen (vom Betreiber)
 
-Domain, PayPal-Privatkonto (`PAYPAL_ME_USER`), Inbound-Mail-Provider + MX-Eintrag,
-echte PayPal-Zahlungsmails als Test-Fixtures (Freunde & Familie / Waren & Dienstleistungen, DE/EN).
+- Domain, finales PayPal-Privatkonto (`PAYPAL_ME_USER`), Postmark Inbound + MX-Eintrag
+- Eine Rohmail (.eml) einer echten Zahlung, um die DKIM-Prüfung Ende-zu-Ende zu testen
+- Ein PayPal-CSV-Export, um die Spaltenzuordnung zu bestätigen
+- Optional: englische PayPal-Mail, falls das Konto englische Mails bekommt
+
+Nicht umgesetzt (optional laut Spezifikation): IMAP-Polling als Fallback-Adapter.

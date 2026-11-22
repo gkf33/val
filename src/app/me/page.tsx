@@ -97,7 +97,15 @@ export default async function MePage({ searchParams }: { searchParams: Promise<{
                   Unkostenbeitrag <span className="font-bold">{formatEuro(b.lockedAmountCents!)}</span> bis{" "}
                   <span className="font-bold">{formatDateTime(b.paymentDeadline!, tz)}</span>. Danach verfällt der Platz.
                 </p>
-                <p className="text-xs text-fg-2">Bitte nur diesen Code als Nachricht angeben:</p>
+                <ol className="flex list-decimal flex-col gap-1 pl-4 text-xs text-fg-2">
+                  <li>
+                    Genau <span className="font-bold text-fg">{formatEuro(b.lockedAmountCents!)}</span> senden.
+                  </li>
+                  <li>
+                    <span className="font-bold text-fg">„Freunde &amp; Familie“</span> wählen.
+                  </li>
+                  <li>Diesen Code als Mitteilung angeben:</li>
+                </ol>
                 <div className="flex items-center gap-2">
                   <code className="flex-1 font-mono text-2xl font-bold tracking-[0.2em] text-accent-2">{b.referenceCode}</code>
                   <CopyButton value={b.referenceCode} label="kopieren" />
@@ -114,6 +122,12 @@ export default async function MePage({ searchParams }: { searchParams: Promise<{
                 )}
                 <p className="text-xs text-muted">Mit der Zahlung erhältst du deinen QR-Code.</p>
               </div>
+            )}
+
+            {b.guests.some((g) => g.status === "payment_mismatch") && (
+              <p className="border border-warn p-3 text-xs text-warn">
+                ▲ Betrag weicht ab. Wir prüfen und melden uns. Code für Nachzahlungen: <span className="font-mono">{b.referenceCode}</span>
+              </p>
             )}
 
             {b.guests.some((g) => g.status === "paid") && (

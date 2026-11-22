@@ -1,0 +1,15 @@
+From: "service@paypal.at" <service@paypal.at>
+To: Max Mustermann <party@pay.example.org>
+Subject: Sie haben eine Zahlung erhalten
+Date: Sun, 15 Nov 2026 06:44:25 -0800
+Message-ID: <de-received-1234@paypal.example>
+X-Email-Type-Id: PPC000955
+MIME-Version: 1.0
+Content-Type: text/html; charset="UTF-8"
+Content-Transfer-Encoding: 8bit
+
+<html><body><table><tbody><tr><td><span>Max Mustermann, Sie haben €&nbsp;1.234,50&nbsp;EUR erhalten</span></td></tr>
+<tr><td><span>Erika Beispiel hat Ihnen €&nbsp;1.234,50&nbsp;EUR gesendet</span></td></tr>
+<tr><td><span><strong>Transaktionscode</strong><br>4TT33333EF4444455</span></td></tr>
+<tr><td><span><strong>Erhaltener Betrag</strong><br>€&nbsp;1.234,50&nbsp;EUR</span></td></tr>
+</tbody></table></body></html>

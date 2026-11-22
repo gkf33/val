@@ -39,6 +39,27 @@ function byBooking<T extends { bookingId: string | null }>(guests: T[]): Map<str
   return m;
 }
 
+/**
+ * Eindeutiger Cent-Betrag (Feature-Flag UNIQUE_CENT_AMOUNTS): Grundbetrag + 0,01–0,99 €,
+ * eindeutig unter allen Buchungen mit offener Zahlung.
+ */
+export async function uniqueAmount(tx: Tx, baseCents: number, bookingId: string): Promise<number> {
+  const taken = new Set(
+    (
+      await tx.booking.findMany({
+        where: {
+          id: { not: bookingId },
+          lockedAmountCents: { gt: baseCents, lt: baseCents + 100 },
+          guests: { some: { status: { in: ["approved_unpaid", "payment_mismatch"] } } },
+        },
+        select: { lockedAmountCents: true },
+      })
+    ).map((b) => b.lockedAmountCents),
+  );
+  for (let c = 1; c <= 99; c++) if (!taken.has(baseCents + c)) return baseCents + c;
+  throw new ApprovalError("Keine eindeutigen Cent-Beträge mehr frei");
+}
+
 /** Gibt Gäste frei, setzt Betrag und Zahlungsfrist je Buchung, verschickt Mails. */
 export async function approveGuests(actor: Actor, partyId: string, guestIds: string[]) {
   if (guestIds.length === 0) return [];
@@ -61,11 +82,12 @@ export async function approveGuests(actor: Actor, partyId: string, guestIds: str
         where: { bookingId, type: "guest", status: { in: OCCUPYING_STATUSES as DbGuestStatus[] } },
       });
       const booking = await tx.booking.findUniqueOrThrow({ where: { id: bookingId } });
+      const base = approvedCount * party.feeCents;
       await tx.booking.update({
         where: { id: bookingId },
         data: {
           approvedAt: booking.approvedAt ?? now,
-          lockedAmountCents: approvedCount * party.feeCents,
+          lockedAmountCents: config.flags.uniqueCentAmounts ? await uniqueAmount(tx, base, bookingId) : base,
           paymentDeadline: deadline,
           reminderSentAt: null,
         },

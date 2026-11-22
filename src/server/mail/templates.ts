@@ -152,3 +152,23 @@ export function seatFreedAdminMail(to: string, adminUrl: string, partyName: stri
     { label: "QUEUE ▸", url: adminUrl },
   );
 }
+
+// ── Zahlungen ─────────────────────────────────────────────
+
+export function paymentReceivedMail(to: string, statusUrl: string, party: PartyInfo, guests: string[]): OutgoingMail {
+  return mail(
+    to,
+    "Zahlung erhalten",
+    [`Zahlung erhalten. Bestätigt für ${when(party)}: ${names(guests)}.`, "Deine QR-Codes findest du auf der Status-Seite.", "Ausweis mitbringen."],
+    { label: "QR-CODES ▸", url: statusUrl },
+  );
+}
+
+export function restRequestMail(to: string, statusUrl: string, restCents: number, referenceCode: string): OutgoingMail {
+  return mail(
+    to,
+    "Restbetrag offen",
+    [`Es fehlen noch ${formatEuro(restCents)}.`, "Bitte nachzahlen, wieder mit diesem Code als Mitteilung:", { code: referenceCode }],
+    { label: "STATUS ▸", url: statusUrl },
+  );
+}

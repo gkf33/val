@@ -9,6 +9,7 @@ const env = {
   MAIL_TRANSPORT: "file",
   MAIL_OUTBOX_DIR: ".mail-outbox/e2e",
   PAYPAL_ME_USER: "partykasse",
+  INBOUND_WEBHOOK_SECRET: "e2e-inbound-secret-123456",
 };
 
 export default defineConfig({

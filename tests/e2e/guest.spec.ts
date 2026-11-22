@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
 import { loginAdmin, waitForLink } from "./outbox";
 
@@ -45,11 +46,36 @@ test("Gast fragt an, bestätigt, Admin gibt frei, Gast sieht Zahlung", async ({ 
   // Gast sieht Zahlung
   await g.reload();
   await expect(g.getByText("// zahlung")).toBeVisible();
-  await expect(g.getByText("40,00 €")).toBeVisible();
+  await expect(g.getByText("40,00 €").first()).toBeVisible();
   const pay = g.getByRole("link", { name: "MIT PAYPAL ZAHLEN ▸" });
   await expect(pay).toHaveAttribute("href", "https://paypal.me/partykasse/40EUR");
-  const ref = await g.locator("code").first().textContent();
+  const ref = (await g.locator("code").first().textContent())!;
   expect(ref).toMatch(/^[A-Z2-9]{3}-[A-Z2-9]{3}$/);
+
+  // PayPal-Mail kommt per Webhook (simuliert, Fixture mit Mitteilung = Referenzcode)
+  const raw = readFileSync("tests/fixtures/paypal/de-at-received-with-note.eml", "utf8")
+    .replace(/Message-ID: <[^>]+>/, `Message-ID: <${Date.now()}@e2e>`)
+    .replace("7KQ-M4X", ref.toLowerCase().replace("-", " "));
+  const unauthorized = await g.request.post("/api/inbound/raw", { data: raw });
+  expect(unauthorized.status()).toBe(401);
+  const res = await g.request.post("/api/inbound/raw", {
+    data: raw,
+    headers: { authorization: "Bearer e2e-inbound-secret-123456", "content-type": "message/rfc822" },
+  });
+  expect(res.ok()).toBeTruthy();
+  const body = await res.json();
+  // Fixture hat keine DKIM-Signatur → nur Vorschlag, Admin bestätigt
+  expect(body.payment.status).toBe("suggested");
+
+  await a.goto("/admin/payments?tab=unmatched");
+  await expect(a.getByText(`Mitteilung: ${ref.toLowerCase().replace("-", " ")}`)).toBeVisible();
+  await expect(a.getByText("DKIM ungültig")).toBeVisible();
+  await a.getByRole("button", { name: "Bestätigen" }).first().click();
+  await expect(a.getByText("✓ Zahlung zugeordnet")).toBeVisible();
+
+  await g.reload();
+  await expect(g.getByText("bezahlt").first()).toBeVisible();
+  await expect(g.getByText("// zahlung")).toHaveCount(0);
 
   await guestCtx.close();
   await adminCtx.close();

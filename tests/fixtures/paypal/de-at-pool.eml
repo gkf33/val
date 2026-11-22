@@ -1,0 +1,19 @@
+From: "service@paypal.at" <service@paypal.at>
+To: Max Mustermann <party@pay.example.org>
+Subject: Sie haben in einen Pool eingezahlt
+Date: Sun, 15 Nov 2026 06:44:25 -0800
+Message-ID: <de-at-pool@paypal.example>
+X-Email-Type-Id: RT000417
+MIME-Version: 1.0
+Content-Type: text/html; charset="UTF-8"
+Content-Transfer-Encoding: 8bit
+
+<html><body><table><tbody><tr><td><span>Sie haben in einen Pool eingezahlt</span></td></tr>
+<tr><td><span>Hallo Max Mustermann!</span></td></tr>
+<tr><td><span>Sie haben mit 30,00 EUR zu Erika Beispiel beigetragen</span></td></tr>
+<tr><td><span>Name des Pools</span></td></tr>
+<tr><td><span>Geburtstag</span></td></tr>
+<tr><td><span><strong>Transaktionscode</strong><br>34100000000000000</span></td></tr>
+<tr><td><span>Geld gesendet</span></td></tr>
+<tr><td><span>30,00 EUR</span></td></tr>
+</tbody></table></body></html>
