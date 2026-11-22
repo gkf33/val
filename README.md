@@ -97,6 +97,10 @@ curl -H "Authorization: Bearer $CRON_SECRET" https://<domain>/api/cron/tick
 
 Kostenlos z. B. über cron-job.org; mit Vercel Pro alternativ Vercel Cron.
 
+## Online testen
+
+Schritt-für-Schritt für Vercel + Neon (kostenlos, ohne Domain): [DEPLOY.md](DEPLOY.md).
+
 ## Lokal starten
 
 Voraussetzungen: Node 20+, PostgreSQL 14+.

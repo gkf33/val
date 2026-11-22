@@ -8,6 +8,8 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  // Direkte Verbindung für Migrationen (bei Neon: ungepoolte URL); lokal identisch mit DATABASE_URL
+  directUrl = env("DATABASE_URL_UNPOOLED")
 }
 
 enum PartyStatus {

@@ -16,7 +16,9 @@ function bool(name: string, fallback = false): boolean {
 
 export const config = {
   get appUrl() {
-    return (process.env.APP_URL ?? "http://localhost:3000").replace(/\/$/, "");
+    // Auf Vercel ohne APP_URL: Produktions-Domain des Projekts
+    const vercel = process.env.VERCEL_PROJECT_PRODUCTION_URL;
+    return (process.env.APP_URL || (vercel ? `https://${vercel}` : "http://localhost:3000")).replace(/\/$/, "");
   },
   get appSecret() {
     const s = process.env.APP_SECRET;

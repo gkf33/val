@@ -11,7 +11,7 @@ export default async function setup() {
   const dbName = new URL(url).pathname.slice(1);
   if (!dbName.endsWith("_test")) throw new Error(`Test-DB muss auf _test enden (ist: ${dbName})`);
 
-  execSync("npx prisma migrate deploy", { env: { ...process.env, DATABASE_URL: url }, stdio: "pipe" });
+  execSync("npx prisma migrate deploy", { env: { ...process.env, DATABASE_URL: url, DATABASE_URL_UNPOOLED: url }, stdio: "pipe" });
 
   const prisma = new PrismaClient({ datasources: { db: { url } } });
   const tables = await prisma.$queryRaw<{ tablename: string }[]>`
