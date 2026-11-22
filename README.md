@@ -6,18 +6,37 @@ Unkostenbeitrag per PayPal, QR-Code, Pflicht-Check-in an der Tür.
 Stack: Next.js 15 (App Router, TypeScript), Tailwind 4, PostgreSQL + Prisma 6,
 eigener Magic-Link-Login, Vitest, Playwright.
 
-## Stand: Phase 1
+## Stand: Phase 2
 
 | Bereich | Status |
 |---|---|
 | Datenmodell (alle Phasen) | ✔ `prisma/schema.prisma` |
-| Statusmaschine, Kapazität, Fristen, Codes | ✔ `src/domain/*` mit Unit-Tests |
+| Statusmaschine, Kapazität, Fristen, Codes, Personen | ✔ `src/domain/*` mit Unit-Tests |
 | Kapazität mit DB-Locking (kein Überbuchen) | ✔ `src/server/capacity.ts`, Integrationstests inkl. Parallelität |
-| Magic-Link-Login (Admin + Gäste) | ✔ Einmal-Token, gehasht, 15 min, Rate-Limit, Bestätigungsklick |
-| Admin-Backend (mobil, installierbar) | ✔ Übersicht, Partys anlegen/bearbeiten, Links, Audit-Log |
-| Party-Links + Einlader-Links | ✔ deaktivieren, neu erzeugen |
-| Party-Seite für Gäste | ✔ Infos + freie Plätze; Formular folgt in Phase 2 |
-| Mail-Versand | ✔ `console`, `file` oder `smtp` (z. B. Mailpit) |
+| Magic-Link-Login (Admin + Gäste) | ✔ Einmal-Token, gehasht, Rate-Limit, Bestätigungsklick |
+| Admin-Backend (mobil, installierbar) | ✔ Übersicht, Partys, Links, Freigabe-Queue, Warteliste, Crew, Audit-Log |
+| Gäste-Flow | ✔ Formular mit Begleitpersonen, E-Mail-Bestätigung, Status-Seite mit Zahlungsinfos |
+| Freigabe | ✔ ganze Gruppe, einzelne Gäste, Bulk; Warnungen für Duplikate und Sperrliste; Historie; Ablehnen mit Nachricht |
+| Zahlungsfrist | ✔ Betrag + Frist bei Freigabe festgeschrieben, Erinnerung, Ablauf, Admin-Hinweis „Platz frei“ |
+| Zahlungseingang (PayPal-Mails) | Phase 3 |
+
+### Gäste-Flow
+
+1. `/p/<slug>-<code>`: Name wie im Ausweis, E-Mail, 18+, optional „komme nicht selbst“, bis zu `maxGroupSize` Personen.
+   Wiederkehrende Gäste (eingeloggt) bekommen Name, E-Mail und frühere Begleitungen vorgeschlagen.
+2. Bestätigungsmail (Link 24 h gültig). Erst danach: `requested`, oder `waitlisted`, wenn nicht genug Plätze frei sind.
+3. `/me`: Status je Person; nach Freigabe Betrag, Frist, Referenzcode und PayPal-Button (`PAYPAL_ME_USER`).
+
+### Fristen und Cron
+
+Abgelaufene Fristen werden bei jedem Aufruf von Party-Seite, Status-Seite und Admin geprüft.
+Für Erinnerungen und „Platz frei“-Mails zusätzlich alle 5 min aufrufen:
+
+```bash
+curl -H "Authorization: Bearer $CRON_SECRET" https://<domain>/api/cron/tick
+```
+
+Kostenlos z. B. über cron-job.org; mit Vercel Pro alternativ Vercel Cron.
 
 ## Lokal starten
 
@@ -51,7 +70,7 @@ npm run test:e2e    # Playwright gegen E2E_DATABASE_URL (Name muss auf _e2e ende
 ```
 src/domain/     Reine Regeln: Statusmaschine, Kapazität, Fristen, Codes, Geld, Zeitzonen
 src/server/     DB, Auth, Mail, Audit, Kapazität mit Locking, Partys/Links
-src/app/        Seiten: /p/<slug>-<code> (Gäste), /admin (Backend), /auth/verify, /login, /me
+src/app/        Seiten: /p/<slug>-<code> (Gäste), /me (Status), /admin (Backend), /auth/verify, /login, /api/cron/tick
 src/components/ UI-Bausteine
 prisma/         Schema, Migrationen, Seed
 tests/          unit/, db/, e2e/

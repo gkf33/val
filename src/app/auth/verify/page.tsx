@@ -16,8 +16,10 @@ export default async function VerifyPage({ searchParams }: { searchParams: Promi
       {row ? (
         <form action={verifyAction} className="flex flex-col gap-6">
           <input type="hidden" name="token" value={token} />
-          <h1 className="text-2xl font-bold">Zugang bestätigen.</h1>
-          <PrimaryButton type="submit">WEITER ▸</PrimaryButton>
+          <h1 className="text-2xl font-bold">
+            {row.purpose === "confirm_booking" ? "Anfrage bestätigen." : "Zugang bestätigen."}
+          </h1>
+          <PrimaryButton type="submit">{row.purpose === "confirm_booking" ? "BESTÄTIGEN ▸" : "WEITER ▸"}</PrimaryButton>
         </form>
       ) : (
         <div className="flex flex-col gap-2">

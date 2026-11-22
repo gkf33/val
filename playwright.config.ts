@@ -8,6 +8,7 @@ const env = {
   ADMIN_EMAILS: "admin@example.com",
   MAIL_TRANSPORT: "file",
   MAIL_OUTBOX_DIR: ".mail-outbox/e2e",
+  PAYPAL_ME_USER: "partykasse",
 };
 
 export default defineConfig({

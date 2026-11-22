@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/server/db";
 import { config } from "@/server/config";
@@ -34,8 +35,19 @@ export default async function PartyPage({ params }: { params: Promise<{ id: stri
         <p className="text-xs text-muted">{formatDateTime(party.startsAt, tz)} – {formatDateTime(party.endsAt, tz)}</p>
       </div>
 
-      <section className="border border-line p-4">
+      <section className="flex flex-col gap-4 border border-line p-4">
         <OccupancyBar o={occ} />
+        <div className="flex flex-wrap gap-2 text-sm">
+          <Link href={`/admin/queue?party=${party.id}`} className="flex min-h-11 items-center border border-line-3 px-3 text-fg no-underline hover:border-accent">
+            Anfragen ({occ.requested})
+          </Link>
+          <Link href={`/admin/queue?party=${party.id}&tab=waitlist`} className="flex min-h-11 items-center border border-line-3 px-3 text-fg no-underline hover:border-accent">
+            Warteliste ({occ.waitlisted})
+          </Link>
+          <Link href={`/admin/parties/${party.id}/crew`} className="flex min-h-11 items-center border border-line-3 px-3 text-fg no-underline hover:border-accent">
+            Crew ({occ.crew})
+          </Link>
+        </div>
       </section>
 
       <section className="flex flex-col gap-3">

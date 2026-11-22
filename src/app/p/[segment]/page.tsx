@@ -7,6 +7,17 @@ import { config } from "@/server/config";
 import { formatDate, formatTime } from "@/domain/time";
 import { formatEuro } from "@/domain/money";
 import { isRegistrationOpen } from "@/domain/deadlines";
+import { expireOverdue } from "@/server/expiry";
+import { getSession } from "@/server/auth/session";
+import { previousCompanions } from "@/server/bookings";
+import { RequestForm } from "@/components/guest/RequestForm";
+import { submitRequestAction } from "./actions";
+
+function deadlineLabel(minutes: number): string {
+  if (minutes % 1440 === 0) return minutes === 1440 ? "1 Tag" : `${minutes / 1440} Tagen`;
+  if (minutes % 60 === 0) return minutes === 60 ? "1 Stunde" : `${minutes / 60} Stunden`;
+  return `${minutes} Minuten`;
+}
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "_", robots: { index: false, follow: false } };
@@ -20,13 +31,23 @@ function Cell({ label, children, wide, accent }: { label: string; children: Reac
   );
 }
 
-export default async function PartyPage({ params }: { params: Promise<{ segment: string }> }) {
+export default async function PartyPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ segment: string }>;
+  searchParams: Promise<{ sent?: string }>;
+}) {
   const { segment } = await params;
+  const { sent } = await searchParams;
   const link = await resolvePartyLink(segment);
   if (!link) notFound();
   const { party } = link;
   const tz = config.timeZone;
+  await expireOverdue(new Date(), party.id);
   const snap = await capacitySnapshot(prisma, party.id);
+  const session = await getSession();
+  const known = session ? await previousCompanions(session.account.id) : [];
   const open = party.status === "open" && isRegistrationOpen(party, new Date());
 
   return (
@@ -61,11 +82,23 @@ export default async function PartyPage({ params }: { params: Promise<{ segment:
 
       {party.info && <p className="text-sm leading-relaxed whitespace-pre-line text-fg-2">{party.info}</p>}
 
-      {open ? (
-        <div className="flex flex-col gap-3 border border-dashed border-line-3 p-4 text-sm text-fg-2">
-          <p className="text-xs text-muted">{"// anfrage"}</p>
-          <p>Formular folgt. (Phase 2)</p>
+      {sent ? (
+        <div className="flex flex-col gap-3 border border-accent p-4">
+          <p className="text-xs text-accent-2">{"// gesendet"}</p>
+          <p className="text-lg font-bold">Check deine Mails.</p>
+          <p className="text-sm leading-relaxed text-fg-2">
+            Erst mit dem Klick auf den Link in der Mail zählt deine Anfrage. Nichts da? Spam-Ordner prüfen.
+          </p>
         </div>
+      ) : open ? (
+        <RequestForm
+          action={submitRequestAction.bind(null, segment)}
+          maxGroupSize={party.maxGroupSize}
+          feeLabel={formatEuro(party.feeCents)}
+          deadlineLabel={deadlineLabel(party.paymentDeadlineMinutes)}
+          prefill={session ? { name: session.account.name ?? "", email: session.account.email } : undefined}
+          knownCompanions={known}
+        />
       ) : (
         <p className="text-sm text-muted">Anmeldung geschlossen.</p>
       )}

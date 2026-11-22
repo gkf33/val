@@ -5,6 +5,7 @@ import { occupancyByParty } from "@/server/stats";
 import { formatDateTime } from "@/domain/time";
 import { formatEuro } from "@/domain/money";
 import { OccupancyBar } from "@/components/admin/OccupancyBar";
+import { expireOverdue } from "@/server/expiry";
 
 const STATUS: Record<string, { label: string; cls: string }> = {
   draft: { label: "Entwurf", cls: "border border-line-3 text-fg-2" },
@@ -23,6 +24,7 @@ function Tile({ label, value, tone }: { label: string; value: number; tone?: "ac
 }
 
 export default async function AdminHome() {
+  await expireOverdue();
   const parties = await prisma.party.findMany({ orderBy: { startsAt: "desc" } });
   const occ = await occupancyByParty(parties.map((p) => p.id));
   const [unmatched, refundsDue] = await Promise.all([
