@@ -90,6 +90,7 @@ export async function submitBookingRequest(link: PartyLink & { party: Party }, i
           name: g.name,
           email: g.email,
           isBooker: g.isBooker,
+          gender: g.gender,
           adultConfirmed: true,
           status: "pending_email" as const,
         })),
@@ -158,12 +159,22 @@ export async function confirmBooking(token: LoginToken) {
   return { account, booking, outcome };
 }
 
+/** Geschlecht des Buchers aus früheren Buchungen (für Vorausfüllen). */
+export async function previousBookerGender(accountId: string): Promise<string | null> {
+  const g = await prisma.guest.findFirst({
+    where: { booking: { accountId }, isBooker: true, gender: { not: null } },
+    orderBy: { createdAt: "desc" },
+    select: { gender: true },
+  });
+  return g?.gender ?? null;
+}
+
 /** Frühere Begleitpersonen eines Kontos (für Vorausfüllen). */
-export async function previousCompanions(accountId: string): Promise<{ name: string; email: string | null }[]> {
+export async function previousCompanions(accountId: string): Promise<{ name: string; email: string | null; gender: string | null }[]> {
   const guests = await prisma.guest.findMany({
     where: { booking: { accountId }, isBooker: false, type: "guest" },
     orderBy: { createdAt: "desc" },
-    select: { name: true, email: true },
+    select: { name: true, email: true, gender: true },
     take: 50,
   });
   const seen = new Set<string>();

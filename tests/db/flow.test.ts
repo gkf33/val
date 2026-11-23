@@ -34,6 +34,7 @@ function req(extra: Partial<Parameters<typeof submitBookingRequest>[1]> = {}) {
   return {
     name: `Gast Nummer${"abcdefghijklmnopqrstuvwxyz"[n % 26]}${n}`,
     email: `gast${n}-${Date.now()}@example.com`,
+    gender: "w",
     adult: true,
     notAttending: false,
     privacy: true,
@@ -56,7 +57,7 @@ async function submitAndConfirm(link: Awaited<ReturnType<typeof setup>>["link"],
 describe("Gäste-Flow", () => {
   it("Anfrage zählt erst nach Bestätigung", async () => {
     const { link } = await setup();
-    const r = req({ companions: [{ name: "Sam Muster", adult: true }] });
+    const r = req({ companions: [{ name: "Sam Muster", gender: "m", adult: true }] });
     const booking = await submitBookingRequest(link, r);
     expect(mailer.sent.at(-1)!.subject).toBe("Bestätige deine Anfrage");
     let guests = await prisma.guest.findMany({ where: { bookingId: booking.id } });
@@ -107,7 +108,7 @@ describe("Gäste-Flow", () => {
 describe("Freigabe", () => {
   it("setzt Betrag, Frist und schickt Zahlungsinfos", async () => {
     const { link, party } = await setup();
-    const { booking } = await submitAndConfirm(link, req({ companions: [{ name: "Sam Muster", adult: true }, { name: "Kim Muster", adult: true }] }));
+    const { booking } = await submitAndConfirm(link, req({ companions: [{ name: "Sam Muster", gender: "m", adult: true }, { name: "Kim Muster", gender: "m", adult: true }] }));
     const guests = await prisma.guest.findMany({ where: { bookingId: booking.id } });
     const before = Date.now();
     await approveGuests(admin, party.id, guests.slice(0, 2).map((g) => g.id)); // Teilfreigabe 2 von 3
@@ -128,7 +129,7 @@ describe("Freigabe", () => {
 
   it("über Kapazität wird abgelehnt", async () => {
     const { link, party } = await setup(2);
-    const { booking } = await submitAndConfirm(link, req({ companions: [{ name: "Sam Muster", adult: true }, { name: "Kim Muster", adult: true }] }));
+    const { booking } = await submitAndConfirm(link, req({ companions: [{ name: "Sam Muster", gender: "m", adult: true }, { name: "Kim Muster", gender: "m", adult: true }] }));
     const guests = await prisma.guest.findMany({ where: { bookingId: booking.id } });
     expect(guests[0].status).toBe("waitlisted"); // 3 > 2 frei
     await expect(approveGuests(admin, party.id, guests.map((g) => g.id))).rejects.toBeInstanceOf(CapacityError);

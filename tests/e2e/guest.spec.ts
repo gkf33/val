@@ -12,13 +12,16 @@ test("Gast fragt an, bestätigt, Admin gibt frei, Gast sieht Zahlung", async ({ 
   await g.getByLabel("Name — wie im Ausweis").fill("Robin E2E");
   await g.getByLabel("E-Mail", { exact: true }).fill(GUEST);
   await g.getByLabel("Ich bin 18 oder älter.").check();
+  await g.getByRole("radio", { name: "d" }).first().check({ force: true });
 
-  // Fehler: Begleitung ohne 18+
+  // Fehler: Begleitung ohne 18+ und ohne Geschlecht
   await g.getByRole("button", { name: /person hinzufügen/ }).click();
   await g.locator("#c0-name").fill("Sam Begleitung");
   await g.getByText(/Verstanden\./).click();
   await g.getByRole("button", { name: "ANFRAGE SENDEN ▸" }).click();
   await expect(g.getByText("▲ Nur ab 18")).toBeVisible();
+  await expect(g.getByText("▲ Bitte m, w oder d wählen")).toBeVisible();
+  await g.getByRole("radio", { name: "w" }).nth(1).check({ force: true });
 
   await g.getByLabel("18+ bestätigt").check();
   await g.getByRole("button", { name: "ANFRAGE SENDEN ▸" }).click();
@@ -40,6 +43,7 @@ test("Gast fragt an, bestätigt, Admin gibt frei, Gast sieht Zahlung", async ({ 
   const card = a.locator("li", { hasText: GUEST });
   await expect(card).toBeVisible();
   await expect(card.getByText("via Party-Link")).toBeVisible();
+  await expect(a.getByText("Angefragt + Warteliste")).toBeVisible();
   await card.getByRole("button", { name: "Freigeben" }).click();
   await expect(a.getByText("✓ 2 freigegeben")).toBeVisible();
 
@@ -96,6 +100,7 @@ test("Queue zeigt Sperrlisten-Warnung", async ({ browser }) => {
   await g.goto("/p/nacht-07-zugang23");
   await g.getByLabel("Name — wie im Ausweis").fill("Max Ärger");
   await g.getByLabel("E-Mail", { exact: true }).fill(email);
+  await g.getByRole("radio", { name: "m" }).first().check({ force: true });
   await g.getByLabel("Ich bin 18 oder älter.").check();
   await g.getByText(/Verstanden\./).click();
   await g.getByRole("button", { name: "ANFRAGE SENDEN ▸" }).click();

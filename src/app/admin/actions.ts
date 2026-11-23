@@ -137,6 +137,7 @@ export async function addCrewAction(partyId: string, formData: FormData) {
       name: String(formData.get("name") ?? ""),
       role: String(formData.get("role") ?? ""),
       email: String(formData.get("email") ?? ""),
+      gender: String(formData.get("gender") ?? ""),
     });
   } catch (e) {
     const m = friendly(e);

@@ -5,6 +5,7 @@ import { occupancyByParty } from "@/server/stats";
 import { formatDateTime } from "@/domain/time";
 import { formatEuro } from "@/domain/money";
 import { OccupancyBar } from "@/components/admin/OccupancyBar";
+import { GenderSplit } from "@/components/admin/GenderSplit";
 import { expireOverdue } from "@/server/expiry";
 
 const STATUS: Record<string, { label: string; cls: string }> = {
@@ -70,6 +71,7 @@ export default async function AdminHome() {
                   <span className={`px-2 py-1 text-[11px] font-semibold ${s.cls}`}>{s.label}</span>
                 </div>
                 <OccupancyBar o={occ[p.id]} />
+                <GenderSplit counts={occ[p.id].genders} label="Belegt nach Geschlecht" />
               </Link>
             </li>
           );

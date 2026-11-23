@@ -26,10 +26,11 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   });
   const tz = config.timeZone;
   const rows = [
-    ["Drinnen", "Name", "Typ", "Status", "Bucher", "Referenz", "Über", "Check-in"],
+    ["Drinnen", "Name", "m/w/d", "Typ", "Status", "Bucher", "Referenz", "Über", "Check-in"],
     ...guests.map((g) => [
       g.status === "checked_in" ? "x" : "",
       g.name,
+      g.gender ?? "",
       g.type === "crew" ? `Crew${g.role ? ` (${g.role})` : ""}` : "Gast",
       STATUS_LABEL[g.status as GuestStatus],
       g.booking?.bookerName ?? "",

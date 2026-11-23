@@ -24,6 +24,13 @@ enum LinkType {
   door
 }
 
+/// m = männlich, w = weiblich, d = divers
+enum Gender {
+  m
+  w
+  d
+}
+
 enum GuestType {
   guest
   crew
@@ -232,6 +239,7 @@ model Guest {
   email           String?
   isBooker        Boolean     @default(false)
   adultConfirmed  Boolean     @default(false)
+  gender          Gender?
   type            GuestType   @default(guest)
   /// Freitext für Crew, z. B. „DJ“, „Bar“
   role            String?
@@ -257,6 +265,7 @@ model NameChangeRequest {
   guest          Guest            @relation(fields: [guestId], references: [id], onDelete: Cascade)
   newName        String
   newEmail       String?
+  newGender      Gender?
   adultConfirmed Boolean
   status         NameChangeStatus @default(pending)
   createdAt      DateTime         @default(now())

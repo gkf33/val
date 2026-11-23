@@ -7,6 +7,8 @@ import { expireOverdue } from "@/server/expiry";
 import { formatDateTime } from "@/domain/time";
 import { formatEuro } from "@/domain/money";
 import { queueAction } from "@/app/admin/actions";
+import { occupancyByParty } from "@/server/stats";
+import { GenderSplit } from "@/components/admin/GenderSplit";
 
 export const dynamic = "force-dynamic";
 
@@ -47,6 +49,9 @@ function Card({ b, tab }: { b: QueueBooking; tab: string }) {
             <label className="flex min-h-11 items-center gap-3 text-sm">
               <input type="checkbox" name="guest" value={`${b.id}:${g.id}`} defaultChecked={g.warnings.length === 0} className="size-5 shrink-0" />
               <span>{g.name}</span>
+              <span className={`w-5 text-center text-xs font-semibold ${g.gender === "w" ? "text-accent-2" : g.gender === "d" ? "text-warn" : "text-fg-2"}`}>
+                {g.gender ?? "?"}
+              </span>
               {g.isBooker && <span className="text-[11px] text-muted">Bucher</span>}
               {g.status === "waitlisted" && tab !== "waitlist" && <span className="text-[11px] text-muted">Warteliste</span>}
             </label>
@@ -93,6 +98,7 @@ export default async function QueuePage({
   const tab = sp.tab === "waitlist" ? "waitlist" : "requested";
 
   await expireOverdue(now, party.id);
+  const stats = (await occupancyByParty([party.id]))[party.id];
   const [queue, snap, counts] = await Promise.all([
     loadQueue(party.id, tab === "waitlist" ? ["waitlisted"] : ["requested"]),
     capacitySnapshot(prisma, party.id),
@@ -122,6 +128,11 @@ export default async function QueuePage({
         Frei: <span className="font-semibold text-fg">{snap.free}</span> / {snap.capacity} · Beitrag {formatEuro(party.feeCents)} p. P. · Frist{" "}
         {party.paymentDeadlineMinutes} min
       </p>
+
+      <div className="grid gap-3 border border-line p-3 sm:grid-cols-2">
+        <GenderSplit counts={stats.genders} label="Belegt (freigegeben, bezahlt, Crew)" />
+        <GenderSplit counts={stats.requestedGenders} label="Angefragt + Warteliste" />
+      </div>
 
       <nav className="flex gap-2 text-sm">
         {[

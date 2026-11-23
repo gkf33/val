@@ -73,8 +73,8 @@ async function main() {
   });
 
   // Crew
-  for (const [name, role] of [["DJ Nord", "DJ"], ["Mira", "Bar"], ["Tom", "Host"]] as const) {
-    await prisma.guest.create({ data: { partyId: party.id, name, type: "crew", role, status: "paid", adultConfirmed: true, ticketToken: token() } });
+  for (const [name, role, gender] of [["DJ Nord", "DJ", "m"], ["Mira", "Bar", "w"], ["Tom", "Host", "m"]] as const) {
+    await prisma.guest.create({ data: { partyId: party.id, name, type: "crew", role, gender, status: "paid", adultConfirmed: true, ticketToken: token() } });
   }
 
   // Beispielbuchungen in verschiedenen Status
@@ -107,6 +107,7 @@ async function main() {
             isBooker: i === 0,
             email: i === 0 ? s.email : null,
             adultConfirmed: true,
+            gender: (["w", "m", "w", "d"] as const)[(i + name.length) % 4],
             status: s.status,
             ticketToken: s.status === "paid" ? token() : null,
           })),

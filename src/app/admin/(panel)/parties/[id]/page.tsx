@@ -7,6 +7,7 @@ import { occupancyByParty } from "@/server/stats";
 import { utcToLocalInput, formatDateTime } from "@/domain/time";
 import { PartyForm } from "@/components/admin/PartyForm";
 import { OccupancyBar } from "@/components/admin/OccupancyBar";
+import { GenderSplit } from "@/components/admin/GenderSplit";
 import { CopyButton } from "@/components/CopyButton";
 import { DoorSection } from "@/components/admin/DoorSection";
 import {
@@ -39,6 +40,8 @@ export default async function PartyPage({ params, searchParams }: { params: Prom
 
       <section className="flex flex-col gap-4 border border-line p-4">
         <OccupancyBar o={occ} />
+        <GenderSplit counts={occ.genders} label="Belegt nach Geschlecht" />
+        <GenderSplit counts={occ.requestedGenders} label="Angefragt + Warteliste nach Geschlecht" />
         <div className="flex flex-wrap gap-2 text-sm">
           <Link href={`/admin/queue?party=${party.id}`} className="flex min-h-11 items-center border border-line-3 px-3 text-fg no-underline hover:border-accent">
             Anfragen ({occ.requested})
