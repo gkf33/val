@@ -6,7 +6,7 @@ Unkostenbeitrag per PayPal, QR-Code, Pflicht-Check-in an der Tür.
 Stack: Next.js 15 (App Router, TypeScript), Tailwind 4, PostgreSQL + Prisma 6,
 eigener Magic-Link-Login, Vitest, Playwright.
 
-## Stand: Phase 4
+## Stand: Phase 5
 
 | Bereich | Status |
 |---|---|
@@ -23,7 +23,15 @@ eigener Magic-Link-Login, Vitest, Playwright.
 | QR-Codes | ✔ pro Person, signiert (HMAC), Seite mit Adresse/Anfahrt, Teilen-Button, Mails, Erinnerung am Party-Tag |
 | Einlass | ✔ Door-Link + PIN je Party, Geräte benennbar/sperrbar, Scanner-PWA, Check-in/-out, Namenssuche, Licht, Offline-Modus |
 | Live & Export | ✔ Live-Belegung, Gästeliste als CSV und Druck/PDF mit Checkbox-Spalte |
-| Storno, Namensänderung, Sperrliste-Pflege, vertraute Gäste, Transparenz, Statistik, Löschjob | Phase 5 |
+| m/w/d | ✔ Pflichtfeld je Person, Verteilung in Übersicht, Queue, Live; Spalte im Export |
+| Storno | ✔ Gast bis `SELF_CANCEL_HOURS` vorher (ganz/einzeln), danach Anfrage; Admin jederzeit; Erstattung anteilig |
+| Namensänderung | ✔ Antrag durch Gast, Freigabe im Admin (Freigabe → Namen), alter QR ungültig, neuer verschickt |
+| Gäste & Sperrliste | ✔ Konten mit Historie, „vertraut“, Sperren; Sperrliste pflegen |
+| Vertraute Gäste | ✔ automatische Freigabe mit `TRUSTED_AUTO_APPROVE=true` (nur vertraute Personen, nur mit freien Plätzen) |
+| Transparenz | ✔ Kosten je Party, Einnahmen − Erstattungen − Kosten, optional öffentliche Seite `/p/<link>/transparenz` |
+| Statistik | ✔ No-Show-Quote, Gäste je Party nach m/w/d, Einlader-Netzwerk |
+| Datenschutz | ✔ Löschjob (Cron, stündlich): Gästedaten `DATA_RETENTION_DAYS` nach Party anonymisiert, Roh-Mails gelöscht; „Konto löschen“ |
+| Wallet-Pässe | optional (Phase 6) |
 
 ### Gäste-Flow
 
@@ -152,6 +160,12 @@ Gäste-Seiten nutzen die Terminal-Schrift, das Admin-Backend Inter.
 - **Zeiten** werden in UTC gespeichert und in `TZ_DISPLAY` (Europe/Berlin) angezeigt und eingegeben.
 - **Cron** (ab Phase 3): Fristen werden zusätzlich bei jedem Zugriff geprüft;
   Erinnerungen über einen geschützten Endpoint, extern alle 5 min aufgerufen (z. B. cron-job.org).
+
+### Datenschutz-Löschjob
+
+Läuft im Cron-Endpoint einmal pro Stunde. Nach `DATA_RETENTION_DAYS` (Standard 30) Tagen nach Partyende:
+Namen, E-Mails, QR-Tokens der Gäste und Kontaktdaten der Buchungen werden entfernt, Roh-Mails gelöscht.
+Erhalten bleiben: Konten (bis der Gast sie löscht), Status und m/w/d für Statistik, Sperrliste, Beträge.
 
 ## Noch offen (vom Betreiber)
 

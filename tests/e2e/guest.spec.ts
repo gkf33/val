@@ -31,7 +31,7 @@ test("Gast fragt an, bestätigt, Admin gibt frei, Gast sieht Zahlung", async ({ 
   await g.goto(confirm);
   await g.getByRole("button", { name: "BESTÄTIGEN ▸" }).click();
   await expect(g).toHaveURL(/\/me$/);
-  await expect(g.getByText("Robin E2E")).toBeVisible();
+  await expect(g.getByText("Robin E2E").first()).toBeVisible();
   await expect(g.getByText("angefragt").first()).toBeVisible();
 
   // Admin

@@ -158,6 +158,8 @@ model Party {
   directions             String?
   info                   String?
   transparencyPublic     Boolean     @default(false)
+  /// Gesetzt, sobald der Löschjob die Gästedaten anonymisiert hat
+  anonymizedAt           DateTime?
   createdAt              DateTime    @default(now())
   updatedAt              DateTime    @updatedAt
 
@@ -261,6 +263,7 @@ model Guest {
 
 model NameChangeRequest {
   id             String           @id @default(cuid())
+  partyId        String?
   guestId        String
   guest          Guest            @relation(fields: [guestId], references: [id], onDelete: Cascade)
   newName        String

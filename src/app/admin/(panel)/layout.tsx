@@ -8,9 +8,13 @@ const NAV = [
   { href: "/admin", label: "Übersicht" },
   { href: "/admin/queue", label: "Freigabe" },
   { href: "/admin/payments", label: "Zahlungen" },
-  { href: "/admin/parties/new", label: "+ Party" },
+  { href: "/admin/guests", label: "Gäste" },
+  { href: "/admin/stats", label: "Statistik" },
+  { href: "/admin/blocklist", label: "Sperrliste" },
   { href: "/admin/audit", label: "Log" },
 ];
+
+const MOBILE_NAV = [...NAV.slice(0, 4), { href: "/admin/more", label: "Mehr" }];
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const admin = await requireAdmin();
@@ -21,7 +25,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <Link href="/admin" className="text-sm font-semibold text-fg no-underline">
             <span className="text-accent">›_</span> Admin
           </Link>
-          <nav className="hidden gap-5 text-sm md:flex">
+          <nav className="hidden gap-4 text-sm md:flex">
             {NAV.map((n) => (
               <Link key={n.href} href={n.href} className="text-fg-2 no-underline hover:text-fg">
                 {n.label}
@@ -38,7 +42,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       </header>
       <main className="mx-auto max-w-5xl px-5 pt-5 pb-28 md:pb-10">{children}</main>
       <nav className="fixed inset-x-0 bottom-0 z-10 grid grid-cols-5 border-t border-line bg-bg pb-[env(safe-area-inset-bottom)] text-xs md:hidden">
-        {NAV.map((n) => (
+        {MOBILE_NAV.map((n) => (
           <Link key={n.href} href={n.href} className="flex min-h-14 items-center justify-center text-fg-2 no-underline">
             {n.label}
           </Link>

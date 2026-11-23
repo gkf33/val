@@ -10,6 +10,10 @@ import { OccupancyBar } from "@/components/admin/OccupancyBar";
 import { GenderSplit } from "@/components/admin/GenderSplit";
 import { CopyButton } from "@/components/CopyButton";
 import { DoorSection } from "@/components/admin/DoorSection";
+import { FinanceSummary } from "@/components/admin/FinanceSummary";
+import { partyFinance } from "@/server/reports";
+import { formatEuro } from "@/domain/money";
+import { addCostAction, removeCostAction } from "@/app/admin/phase5Actions";
 import {
   createInviterLinkAction,
   createPublicLinkAction,
@@ -18,15 +22,23 @@ import {
   updatePartyAction,
 } from "@/app/admin/actions";
 
-export default async function PartyPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ doorErr?: string }> }) {
+export default async function PartyPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ doorErr?: string; costErr?: string }>;
+}) {
   const { id } = await params;
-  const { doorErr } = await searchParams;
+  const { doorErr, costErr } = await searchParams;
   const party = await prisma.party.findUnique({
     where: { id },
     include: { links: { where: { type: { in: ["public", "inviter"] } }, orderBy: { createdAt: "asc" } } },
   });
   if (!party) notFound();
   const occ = (await occupancyByParty([party.id]))[party.id];
+  const finance = await partyFinance(party.id);
+  const publicLink = party.links.find((l) => l.active && l.type === "public");
   const tz = config.timeZone;
   const active = party.links.filter((l) => l.active);
   const inactive = party.links.filter((l) => !l.active);
@@ -51,6 +63,9 @@ export default async function PartyPage({ params, searchParams }: { params: Prom
           </Link>
           <Link href={`/admin/parties/${party.id}/crew`} className="flex min-h-11 items-center border border-line-3 px-3 text-fg no-underline hover:border-accent">
             Crew ({occ.crew})
+          </Link>
+          <Link href={`/admin/parties/${party.id}/guests`} className="flex min-h-11 items-center border border-line-3 px-3 text-fg no-underline hover:border-accent">
+            Gästeliste
           </Link>
         </div>
       </section>
@@ -118,6 +133,41 @@ export default async function PartyPage({ params, searchParams }: { params: Prom
       </section>
 
       <DoorSection partyId={party.id} error={doorErr} />
+
+      <section id="kosten" className="flex flex-col gap-3">
+        <h2 className="text-sm font-semibold">Kosten &amp; Transparenz</h2>
+        <div className="border border-line p-4">
+          <FinanceSummary f={finance} />
+        </div>
+        <ul className="flex flex-col divide-y divide-line text-sm">
+          {finance.costs.map((c) => (
+            <li key={c.id} className="flex items-center justify-between gap-2 py-1.5">
+              <span className="text-fg-2">{c.label}</span>
+              <span className="flex items-center gap-3">
+                {formatEuro(c.amountCents)}
+                <form action={removeCostAction.bind(null, party.id, c.id)}>
+                  <button aria-label={`${c.label} entfernen`} className="min-h-11 px-2 text-xs text-muted hover:text-fg">✕</button>
+                </form>
+              </span>
+            </li>
+          ))}
+        </ul>
+        <form action={addCostAction.bind(null, party.id)} className="flex gap-2">
+          <label htmlFor="cost-label" className="sr-only">Kostenposition</label>
+          <input id="cost-label" name="label" placeholder="z. B. Getränke" required className="min-h-11 min-w-0 flex-1 border border-line-2 bg-surface-2 px-3 text-sm" />
+          <label htmlFor="cost-amount" className="sr-only">Betrag</label>
+          <input id="cost-amount" name="amount" inputMode="decimal" placeholder="€" required className="min-h-11 w-24 border border-line-2 bg-surface-2 px-3 text-sm" />
+          <button className="min-h-11 border border-line-3 px-3 text-sm">+ Kosten</button>
+        </form>
+        {costErr && <p className="text-xs text-warn">▲ Bezeichnung und Betrag (z. B. 120,50) angeben.</p>}
+        <p className="text-xs text-muted">
+          {party.transparencyPublic && publicLink ? (
+            <>Für Gäste sichtbar: <a href={`/p/${party.slug}-${publicLink.code}/transparenz`}>Transparenzseite ▸</a></>
+          ) : (
+            "Für Gäste unsichtbar. Unter Einstellungen „Transparenzseite für Gäste sichtbar“ aktivieren."
+          )}
+        </p>
+      </section>
 
       <section className="flex flex-col gap-4">
         <h2 className="text-sm font-semibold">Einstellungen</h2>

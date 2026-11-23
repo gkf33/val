@@ -88,7 +88,7 @@ async function main() {
   for (const s of samples) {
     const account = await prisma.account.create({ data: { email: s.email, name: s.names[0] } });
     const approved = ["paid", "approved_unpaid"].includes(s.status);
-    await prisma.booking.create({
+    const booking = await prisma.booking.create({
       data: {
         partyId: party.id,
         accountId: account.id,
@@ -114,6 +114,20 @@ async function main() {
         },
       },
     });
+    if (s.status === "paid") {
+      await prisma.payment.create({
+        data: {
+          paypalTxId: `SEED${booking.referenceCode.replace("-", "")}0000000`.slice(0, 17),
+          grossCents: s.names.length * party.feeCents,
+          senderName: s.names[0],
+          note: booking.referenceCode,
+          source: "manual",
+          state: "matched",
+          matchType: "manual",
+          matchedBookingId: booking.id,
+        },
+      });
+    }
   }
 
   // Door-Link (PIN 1234), gültig ab sofort bis Partyende + 6 h

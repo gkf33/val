@@ -200,3 +200,34 @@ export function restRequestMail(to: string, statusUrl: string, restCents: number
     { label: "STATUS ▸", url: statusUrl },
   );
 }
+
+// ── Storno & Namensänderung ───────────────────────────────
+
+export function cancelConfirmMail(to: string, guests: string[], refundCents: number): OutgoingMail {
+  return mail(to, "Storniert", [
+    `Storniert: ${names(guests)}.`,
+    ...(refundCents > 0 ? [`${formatEuro(refundCents)} werden erstattet. Das kann ein paar Tage dauern.`] : []),
+    "Plätze sind wieder frei.",
+  ]);
+}
+
+export function cancelRequestAdminMail(to: string, url: string, partyName: string, booker: string, ref: string, message: string): OutgoingMail {
+  return mail(to, `Storno-Anfrage · ${partyName}`, [`${booker} (${ref}) bittet um Storno nach Fristende.`, ...(message ? [`Nachricht: ${message}`] : [])], {
+    label: "GÄSTELISTE ▸",
+    url,
+  });
+}
+
+export function nameChangeAdminMail(to: string, url: string, oldName: string, newName: string): OutgoingMail {
+  return mail(to, "Namensänderung beantragt", [`${oldName} → ${newName}`], { label: "PRÜFEN ▸", url });
+}
+
+export function nameChangeDecisionMail(to: string, oldName: string, newName: string, approved: boolean, ticket?: string): OutgoingMail {
+  return approved
+    ? mail(to, "Namensänderung bestätigt", [`${oldName} → ${newName}.`, `Der alte QR-Code ist ungültig. Neuer QR-Code für ${newName}:`], { label: "QR-CODE ▸", url: ticket! })
+    : mail(to, "Namensänderung abgelehnt", [`Keine Änderung von ${oldName} auf ${newName}. Der bisherige QR-Code bleibt gültig.`]);
+}
+
+export function accountDeletedMail(to: string): OutgoingMail {
+  return mail(to, "Konto gelöscht", ["Dein Konto und deine Daten sind gelöscht."]);
+}
