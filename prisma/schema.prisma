@@ -24,6 +24,13 @@ enum LinkType {
   door
 }
 
+/// m = männlich, w = weiblich, d = divers
+enum Gender {
+  m
+  w
+  d
+}
+
 enum GuestType {
   guest
   crew
@@ -151,6 +158,8 @@ model Party {
   directions             String?
   info                   String?
   transparencyPublic     Boolean     @default(false)
+  /// Gesetzt, sobald der Löschjob die Gästedaten anonymisiert hat
+  anonymizedAt           DateTime?
   createdAt              DateTime    @default(now())
   updatedAt              DateTime    @updatedAt
 
@@ -232,6 +241,7 @@ model Guest {
   email           String?
   isBooker        Boolean     @default(false)
   adultConfirmed  Boolean     @default(false)
+  gender          Gender?
   type            GuestType   @default(guest)
   /// Freitext für Crew, z. B. „DJ“, „Bar“
   role            String?
@@ -253,10 +263,12 @@ model Guest {
 
 model NameChangeRequest {
   id             String           @id @default(cuid())
+  partyId        String?
   guestId        String
   guest          Guest            @relation(fields: [guestId], references: [id], onDelete: Cascade)
   newName        String
   newEmail       String?
+  newGender      Gender?
   adultConfirmed Boolean
   status         NameChangeStatus @default(pending)
   createdAt      DateTime         @default(now())

@@ -24,11 +24,18 @@ export default async function CrewPage({ params, searchParams }: { params: Promi
         Belegt einen Platz, zahlt nichts. Frei: <span className="font-semibold text-fg">{snap.free}</span> / {snap.capacity}
       </p>
       {err && <p className="border border-warn p-3 text-sm text-warn">▲ {err}</p>}
-      <form action={addCrewAction.bind(null, id)} className="grid gap-2 sm:grid-cols-[2fr_1fr_2fr_auto]">
+      <form action={addCrewAction.bind(null, id)} className="grid gap-2 sm:grid-cols-[2fr_1fr_auto_2fr_auto]">
         <label className="sr-only" htmlFor="crew-name">Name</label>
         <input id="crew-name" name="name" placeholder="Name wie im Ausweis" required className={field} />
         <label className="sr-only" htmlFor="crew-role">Rolle</label>
         <input id="crew-role" name="role" placeholder="Rolle (DJ, Bar …)" className={field} />
+        <label className="sr-only" htmlFor="crew-gender">Geschlecht</label>
+        <select id="crew-gender" name="gender" defaultValue="" className={field}>
+          <option value="">m/w/d</option>
+          <option value="m">m</option>
+          <option value="w">w</option>
+          <option value="d">d</option>
+        </select>
         <label className="sr-only" htmlFor="crew-mail">E-Mail</label>
         <input id="crew-mail" name="email" type="email" placeholder="E-Mail (optional)" className={field} />
         <button className="min-h-11 bg-accent px-4 text-sm font-semibold text-on-accent">+ Hinzufügen</button>
@@ -37,7 +44,7 @@ export default async function CrewPage({ params, searchParams }: { params: Promi
         {crew.map((c) => (
           <li key={c.id} className="flex items-center justify-between gap-3 py-2 text-sm">
             <span>
-              {c.name} {c.role && <span className="ml-2 bg-line-2 px-2 py-0.5 text-[11px] text-fg-2">{c.role}</span>}
+              {c.name} {c.gender && <span className="ml-1 text-xs text-muted">{c.gender}</span>} {c.role && <span className="ml-2 bg-line-2 px-2 py-0.5 text-[11px] text-fg-2">{c.role}</span>}
             </span>
             <form action={removeCrewAction.bind(null, id, c.id)}>
               <button className="min-h-11 text-xs text-warn underline">Entfernen</button>

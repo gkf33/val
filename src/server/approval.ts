@@ -14,6 +14,7 @@ import { approvedMail, rejectedMail, ticketMail, waitlistMail } from "./mail/tem
 import { ticketUrl } from "./tickets";
 import { paypalMeUrl } from "./payments/paypal";
 import { statusUrl } from "./bookings";
+import { isGender } from "@/domain/people";
 import { randomToken } from "./crypto";
 
 export class ApprovalError extends Error {
@@ -150,7 +151,7 @@ export async function waitlistGuests(actor: Actor, partyId: string, guestIds: st
 
 // ── Crew ──────────────────────────────────────────────────
 
-export async function addCrew(actor: Actor, partyId: string, input: { name: string; role?: string; email?: string }) {
+export async function addCrew(actor: Actor, partyId: string, input: { name: string; role?: string; email?: string; gender?: string }) {
   const name = input.name.trim().replace(/\s+/g, " ");
   if (name.length < 2) throw new ApprovalError("Name fehlt");
   const guest = await withPartyLock(partyId, async (tx) => {
@@ -163,6 +164,7 @@ export async function addCrew(actor: Actor, partyId: string, input: { name: stri
         name,
         role: input.role?.trim() || null,
         email: input.email?.trim().toLowerCase() || null,
+        gender: isGender(input.gender) ? input.gender : null,
         type: "crew",
         status: "paid",
         adultConfirmed: true,

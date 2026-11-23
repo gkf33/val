@@ -36,6 +36,7 @@ export default async function PrintList({ params }: { params: Promise<{ id: stri
           <tr className="border-b-2 border-black text-left">
             <th className="w-10 py-1">✓</th>
             <th className="py-1">Name</th>
+            <th className="w-10 py-1">m/w/d</th>
             <th className="py-1">Typ</th>
             <th className="py-1">Ref</th>
           </tr>
@@ -47,6 +48,7 @@ export default async function PrintList({ params }: { params: Promise<{ id: stri
                 <span className="inline-block size-4 border border-black align-middle">{g.status === "checked_in" ? "×" : ""}</span>
               </td>
               <td className="py-1.5 font-medium">{g.name}</td>
+              <td className="py-1.5">{g.gender ?? ""}</td>
               <td className="py-1.5">{g.type === "crew" ? `Crew${g.role ? ` · ${g.role}` : ""}` : ""}</td>
               <td className="py-1.5 font-mono text-xs">{g.booking?.referenceCode ?? ""}</td>
             </tr>

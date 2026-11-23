@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { GenderCounts } from "@/domain/people";
+import { GenderSplit } from "./GenderSplit";
 
 interface Live {
   inside: number;
@@ -8,6 +10,7 @@ interface Live {
   checkedInTotal: number;
   expected: number;
   noShows: number;
+  genders: GenderCounts;
   recent: { name: string; status: string; statusChangedAt: string; checkedInDevice: string | null; type: string }[];
 }
 
@@ -47,6 +50,7 @@ export function LiveBoard({ partyId }: { partyId: string }) {
       <div className="h-2 bg-line">
         <div className="h-2 bg-accent" style={{ width: `${Math.min(100, (d.inside / d.capacity) * 100)}%` }} />
       </div>
+      <GenderSplit counts={d.genders} label="Drinnen nach Geschlecht" />
       <div className="grid grid-cols-3 gap-2">
         {tile("Eingecheckt gesamt", d.checkedInTotal)}
         {tile("Erwartet", d.expected)}

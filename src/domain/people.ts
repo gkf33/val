@@ -53,14 +53,33 @@ export function findMatches<T extends PersonRef>(people: PersonRef[], against: T
   return hits;
 }
 
+// ── Geschlecht ────────────────────────────────────────────
+
+export const GENDERS = ["m", "w", "d"] as const;
+export type Gender = (typeof GENDERS)[number];
+export const GENDER_LABEL: Record<Gender, string> = { m: "männlich", w: "weiblich", d: "divers" };
+
+export function isGender(v: unknown): v is Gender {
+  return typeof v === "string" && (GENDERS as readonly string[]).includes(v);
+}
+
+export type GenderCounts = Record<Gender | "unknown", number>;
+
+export function countGenders(list: { gender: string | null }[]): GenderCounts {
+  const c: GenderCounts = { m: 0, w: 0, d: 0, unknown: 0 };
+  for (const g of list) c[isGender(g.gender) ? g.gender : "unknown"]++;
+  return c;
+}
+
 // ── Anfrage ───────────────────────────────────────────────
 
 export interface RequestInput {
   name: string;
   email: string;
+  gender?: string;
   adult: boolean;
   notAttending: boolean;
-  companions: { name: string; email?: string; adult: boolean }[];
+  companions: { name: string; email?: string; gender?: string; adult: boolean }[];
   privacy: boolean;
 }
 
@@ -68,7 +87,7 @@ export interface ValidRequest {
   bookerName: string;
   email: string;
   bookerAttends: boolean;
-  guests: { name: string; email: string | null; isBooker: boolean }[];
+  guests: { name: string; email: string | null; isBooker: boolean; gender: Gender }[];
 }
 
 export type RequestErrors = Record<string, string>;
@@ -84,16 +103,19 @@ export function validateRequest(
   if (!isEmail(email)) errors.email = "E-Mail ungültig";
   if (!input.adult) errors.adult = "Nur ab 18";
   if (!input.privacy) errors.privacy = "Bitte bestätigen";
+  if (!input.notAttending && !isGender(input.gender)) errors.gender = "Bitte m, w oder d wählen";
 
   const companions = input.companions.map((c) => ({
     name: c.name.trim().replace(/\s+/g, " "),
     email: c.email?.trim() ? normalizeEmail(c.email) : null,
+    gender: c.gender,
     adult: c.adult,
   }));
   companions.forEach((c, i) => {
     if (!isFullName(c.name)) errors[`c${i}.name`] = "Vor- und Nachname, wie im Ausweis";
     if (c.email && !isEmail(c.email)) errors[`c${i}.email`] = "E-Mail ungültig";
     if (!c.adult) errors[`c${i}.adult`] = "Nur ab 18";
+    if (!isGender(c.gender)) errors[`c${i}.gender`] = "Bitte m, w oder d wählen";
   });
 
   const attendees = (input.notAttending ? 0 : 1) + companions.length;
@@ -111,8 +133,8 @@ export function validateRequest(
       email,
       bookerAttends: !input.notAttending,
       guests: [
-        ...(input.notAttending ? [] : [{ name, email, isBooker: true }]),
-        ...companions.map((c) => ({ name: c.name, email: c.email, isBooker: false })),
+        ...(input.notAttending ? [] : [{ name, email, isBooker: true, gender: input.gender as Gender }]),
+        ...companions.map((c) => ({ name: c.name, email: c.email, isBooker: false, gender: c.gender as Gender })),
       ],
     },
   };

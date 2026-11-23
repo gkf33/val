@@ -90,6 +90,7 @@ export async function submitBookingRequest(link: PartyLink & { party: Party }, i
           name: g.name,
           email: g.email,
           isBooker: g.isBooker,
+          gender: g.gender,
           adultConfirmed: true,
           status: "pending_email" as const,
         })),
@@ -143,6 +144,10 @@ export async function confirmBooking(token: LoginToken) {
     return to;
   });
 
+  if (outcome === "requested" && config.flags.trustedAutoApprove) {
+    await autoApproveTrusted(booking.id, booking.partyId);
+  }
+
   const guestNames = (await prisma.guest.findMany({ where: { bookingId: booking.id }, orderBy: { createdAt: "asc" } })).map((g) => g.name);
   if (outcome === "requested") {
     await getMailer().send(requestReceivedMail(booking.email, statusUrl(), booking.party, guestNames, booking.party.feeCents));
@@ -158,14 +163,46 @@ export async function confirmBooking(token: LoginToken) {
   return { account, booking, outcome };
 }
 
+/** Geschlecht des Buchers aus früheren Buchungen (für Vorausfüllen). */
+export async function previousBookerGender(accountId: string): Promise<string | null> {
+  const g = await prisma.guest.findFirst({
+    where: { booking: { accountId }, isBooker: true, gender: { not: null } },
+    orderBy: { createdAt: "desc" },
+    select: { gender: true },
+  });
+  return g?.gender ?? null;
+}
+
 /** Frühere Begleitpersonen eines Kontos (für Vorausfüllen). */
-export async function previousCompanions(accountId: string): Promise<{ name: string; email: string | null }[]> {
+export async function previousCompanions(accountId: string): Promise<{ name: string; email: string | null; gender: string | null }[]> {
   const guests = await prisma.guest.findMany({
     where: { booking: { accountId }, isBooker: false, type: "guest" },
     orderBy: { createdAt: "desc" },
-    select: { name: true, email: true },
+    select: { name: true, email: true, gender: true },
     take: 50,
   });
   const seen = new Set<string>();
   return guests.filter((g) => (seen.has(g.name) ? false : (seen.add(g.name), true))).slice(0, 8);
+}
+
+/**
+ * Vertraute Gäste (TRUSTED_AUTO_APPROVE): Bucher mit vertrautem Konto und Begleitungen,
+ * deren E-Mail zu einem vertrauten Konto gehört, werden automatisch freigegeben, solange Plätze frei sind.
+ * Alle anderen bleiben in der Queue.
+ */
+async function autoApproveTrusted(bookingId: string, partyId: string) {
+  const booking = await prisma.booking.findUniqueOrThrow({ where: { id: bookingId }, include: { account: true, guests: { where: { status: "requested" } } } });
+  const emails = booking.guests.map((g) => g.email).filter((e): e is string => !!e);
+  const trustedEmails = new Set(
+    (await prisma.account.findMany({ where: { email: { in: emails }, trusted: true }, select: { email: true } })).map((a) => a.email),
+  );
+  const eligible = booking.guests.filter((g) => (g.isBooker && booking.account?.trusted) || (g.email && trustedEmails.has(g.email)));
+  if (eligible.length === 0) return;
+  const { approveGuests } = await import("./approval");
+  try {
+    await approveGuests({ type: "system", label: "auto-approve (vertraut)" }, partyId, eligible.map((g) => g.id));
+  } catch (e) {
+    // Kein Platz oder Zahlungsfrist vorbei → bleibt in der Queue
+    console.warn("Auto-Freigabe übersprungen:", e instanceof Error ? e.message : e);
+  }
 }

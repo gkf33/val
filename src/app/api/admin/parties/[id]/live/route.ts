@@ -15,5 +15,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     take: 15,
     select: { name: true, status: true, statusChangedAt: true, checkedInDevice: true, type: true },
   });
-  return NextResponse.json({ ...stats, recent });
+  const inside = await prisma.guest.groupBy({ by: ["gender"], where: { partyId: id, status: "checked_in" }, _count: { _all: true } });
+  const genders = { m: 0, w: 0, d: 0, unknown: 0 };
+  for (const g of inside) genders[(g.gender ?? "unknown") as keyof typeof genders] += g._count._all;
+  return NextResponse.json({ ...stats, recent, genders });
 }

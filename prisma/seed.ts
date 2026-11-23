@@ -73,8 +73,8 @@ async function main() {
   });
 
   // Crew
-  for (const [name, role] of [["DJ Nord", "DJ"], ["Mira", "Bar"], ["Tom", "Host"]] as const) {
-    await prisma.guest.create({ data: { partyId: party.id, name, type: "crew", role, status: "paid", adultConfirmed: true, ticketToken: token() } });
+  for (const [name, role, gender] of [["DJ Nord", "DJ", "m"], ["Mira", "Bar", "w"], ["Tom", "Host", "m"]] as const) {
+    await prisma.guest.create({ data: { partyId: party.id, name, type: "crew", role, gender, status: "paid", adultConfirmed: true, ticketToken: token() } });
   }
 
   // Beispielbuchungen in verschiedenen Status
@@ -88,7 +88,7 @@ async function main() {
   for (const s of samples) {
     const account = await prisma.account.create({ data: { email: s.email, name: s.names[0] } });
     const approved = ["paid", "approved_unpaid"].includes(s.status);
-    await prisma.booking.create({
+    const booking = await prisma.booking.create({
       data: {
         partyId: party.id,
         accountId: account.id,
@@ -107,12 +107,27 @@ async function main() {
             isBooker: i === 0,
             email: i === 0 ? s.email : null,
             adultConfirmed: true,
+            gender: (["w", "m", "w", "d"] as const)[(i + name.length) % 4],
             status: s.status,
             ticketToken: s.status === "paid" ? token() : null,
           })),
         },
       },
     });
+    if (s.status === "paid") {
+      await prisma.payment.create({
+        data: {
+          paypalTxId: `SEED${booking.referenceCode.replace("-", "")}0000000`.slice(0, 17),
+          grossCents: s.names.length * party.feeCents,
+          senderName: s.names[0],
+          note: booking.referenceCode,
+          source: "manual",
+          state: "matched",
+          matchType: "manual",
+          matchedBookingId: booking.id,
+        },
+      });
+    }
   }
 
   // Door-Link (PIN 1234), gültig ab sofort bis Partyende + 6 h

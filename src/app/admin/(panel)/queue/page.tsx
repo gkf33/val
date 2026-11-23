@@ -7,6 +7,9 @@ import { expireOverdue } from "@/server/expiry";
 import { formatDateTime } from "@/domain/time";
 import { formatEuro } from "@/domain/money";
 import { queueAction } from "@/app/admin/actions";
+import { decideNameChangeAction } from "@/app/admin/phase5Actions";
+import { occupancyByParty } from "@/server/stats";
+import { GenderSplit } from "@/components/admin/GenderSplit";
 
 export const dynamic = "force-dynamic";
 
@@ -47,6 +50,9 @@ function Card({ b, tab }: { b: QueueBooking; tab: string }) {
             <label className="flex min-h-11 items-center gap-3 text-sm">
               <input type="checkbox" name="guest" value={`${b.id}:${g.id}`} defaultChecked={g.warnings.length === 0} className="size-5 shrink-0" />
               <span>{g.name}</span>
+              <span className={`w-5 text-center text-xs font-semibold ${g.gender === "w" ? "text-accent-2" : g.gender === "d" ? "text-warn" : "text-fg-2"}`}>
+                {g.gender ?? "?"}
+              </span>
               {g.isBooker && <span className="text-[11px] text-muted">Bucher</span>}
               {g.status === "waitlisted" && tab !== "waitlist" && <span className="text-[11px] text-muted">Warteliste</span>}
             </label>
@@ -90,9 +96,15 @@ export default async function QueuePage({
   const now = new Date();
   const party = parties.find((p) => p.id === sp.party) ?? parties.find((p) => p.endsAt > now) ?? parties.at(-1);
   if (!party) return <p className="text-sm text-muted">Keine offene Party.</p>;
-  const tab = sp.tab === "waitlist" ? "waitlist" : "requested";
+  const tab = sp.tab === "waitlist" ? "waitlist" : sp.tab === "names" ? "names" : "requested";
 
   await expireOverdue(now, party.id);
+  const stats = (await occupancyByParty([party.id]))[party.id];
+  const nameChanges = await prisma.nameChangeRequest.findMany({
+    where: { partyId: party.id, status: "pending" },
+    include: { guest: { include: { booking: { select: { bookerName: true, referenceCode: true } } } } },
+    orderBy: { createdAt: "asc" },
+  });
   const [queue, snap, counts] = await Promise.all([
     loadQueue(party.id, tab === "waitlist" ? ["waitlisted"] : ["requested"]),
     capacitySnapshot(prisma, party.id),
@@ -123,10 +135,16 @@ export default async function QueuePage({
         {party.paymentDeadlineMinutes} min
       </p>
 
+      <div className="grid gap-3 border border-line p-3 sm:grid-cols-2">
+        <GenderSplit counts={stats.genders} label="Belegt (freigegeben, bezahlt, Crew)" />
+        <GenderSplit counts={stats.requestedGenders} label="Angefragt + Warteliste" />
+      </div>
+
       <nav className="flex gap-2 text-sm">
         {[
           { key: "requested", label: `Anfragen (${n("requested")})` },
           { key: "waitlist", label: `Warteliste (${n("waitlisted")})` },
+          { key: "names", label: `Namen (${nameChanges.length})` },
         ].map((t) => (
           <Link
             key={t.key}
@@ -141,7 +159,31 @@ export default async function QueuePage({
       {sp.ok && <p className="border border-ok p-3 text-sm text-ok-2">✓ {sp.ok}</p>}
       {sp.err && <p className="border border-warn p-3 text-sm text-warn">▲ {sp.err}</p>}
 
-      {queue.length === 0 ? (
+      {tab === "names" ? (
+        <ul className="flex flex-col gap-2">
+          {nameChanges.map((r) => (
+            <li key={r.id} className="flex flex-col gap-2 border border-line-2 bg-surface p-3 text-sm">
+              <p>
+                <span className="text-muted line-through">{r.guest.name}</span> → <span className="font-semibold">{r.newName}</span>{" "}
+                <span className="text-xs text-muted">{r.newGender}</span>
+              </p>
+              <p className="text-[11px] text-muted">
+                Bucher {r.guest.booking?.bookerName} · {r.guest.booking?.referenceCode}
+                {r.newEmail && ` · ${r.newEmail}`} · 18+ bestätigt
+              </p>
+              <div className="flex gap-2">
+                <form action={decideNameChangeAction.bind(null, party.id, r.id, true)}>
+                  <button className="min-h-11 bg-accent px-4 font-semibold text-on-accent">Freigeben</button>
+                </form>
+                <form action={decideNameChangeAction.bind(null, party.id, r.id, false)}>
+                  <button className="min-h-11 border border-line-3 px-4">Ablehnen</button>
+                </form>
+              </div>
+            </li>
+          ))}
+          {nameChanges.length === 0 && <li className="text-sm text-muted">Keine offenen Namensänderungen.</li>}
+        </ul>
+      ) : queue.length === 0 ? (
         <p className="text-sm text-muted">{tab === "waitlist" ? "Warteliste leer." : "Keine offenen Anfragen."}</p>
       ) : (
         <form action={queueAction.bind(null, party.id, tab)} className="flex flex-col gap-4">

@@ -9,7 +9,7 @@ import { formatEuro } from "@/domain/money";
 import { isRegistrationOpen } from "@/domain/deadlines";
 import { expireOverdue } from "@/server/expiry";
 import { getSession } from "@/server/auth/session";
-import { previousCompanions } from "@/server/bookings";
+import { previousBookerGender, previousCompanions } from "@/server/bookings";
 import { RequestForm } from "@/components/guest/RequestForm";
 import { submitRequestAction } from "./actions";
 
@@ -48,6 +48,7 @@ export default async function PartyPage({
   const snap = await capacitySnapshot(prisma, party.id);
   const session = await getSession();
   const known = session ? await previousCompanions(session.account.id) : [];
+  const knownGender = session ? await previousBookerGender(session.account.id) : null;
   const open = party.status === "open" && isRegistrationOpen(party, new Date());
 
   return (
@@ -96,7 +97,7 @@ export default async function PartyPage({
           maxGroupSize={party.maxGroupSize}
           feeLabel={formatEuro(party.feeCents)}
           deadlineLabel={deadlineLabel(party.paymentDeadlineMinutes)}
-          prefill={session ? { name: session.account.name ?? "", email: session.account.email } : undefined}
+          prefill={session ? { name: session.account.name ?? "", email: session.account.email, gender: knownGender } : undefined}
           knownCompanions={known}
         />
       ) : (

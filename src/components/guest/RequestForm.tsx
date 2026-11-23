@@ -6,7 +6,36 @@ import type { RequestFormState } from "@/app/p/[segment]/actions";
 interface Companion {
   name: string;
   email: string;
+  gender: string;
   adult: boolean;
+}
+
+const GENDER_OPTIONS = [
+  { v: "m", label: "m" },
+  { v: "w", label: "w" },
+  { v: "d", label: "d" },
+];
+
+/** m / w / d als drei große Tasten (Radio-Gruppe). */
+function GenderPicker({ name, value, onChange, legend }: { name: string; value: string; onChange: (v: string) => void; legend: string }) {
+  return (
+    <fieldset className="flex flex-col gap-1.5">
+      <legend className="mb-1.5 text-xs text-fg-2">{legend}</legend>
+      <div className="grid grid-cols-3 gap-2">
+        {GENDER_OPTIONS.map((o) => (
+          <label
+            key={o.v}
+            className={`flex min-h-11 cursor-pointer items-center justify-center border text-[15px] ${
+              value === o.v ? "border-accent bg-accent text-on-accent" : "border-line-2 bg-surface-2 text-fg-2 hover:border-accent"
+            }`}
+          >
+            <input type="radio" name={name} value={o.v} checked={value === o.v} onChange={() => onChange(o.v)} className="sr-only" />
+            {o.label}
+          </label>
+        ))}
+      </div>
+    </fieldset>
+  );
 }
 
 const input =
@@ -28,13 +57,14 @@ export function RequestForm({
   maxGroupSize: number;
   feeLabel: string;
   deadlineLabel: string;
-  prefill?: { name: string; email: string };
-  knownCompanions: { name: string; email: string | null }[];
+  prefill?: { name: string; email: string; gender?: string | null };
+  knownCompanions: { name: string; email: string | null; gender: string | null }[];
 }) {
   const [state, formAction, pending] = useActionState(action, {});
   // Kontrollierte Felder: React 19 setzt unkontrollierte Felder nach jeder Action zurück.
   const [name, setName] = useState(prefill?.name ?? "");
   const [email, setEmail] = useState(prefill?.email ?? "");
+  const [gender, setGender] = useState(prefill?.gender ?? "");
   const [adult, setAdult] = useState(false);
   const [privacy, setPrivacy] = useState(false);
   const [notAttending, setNotAttending] = useState(false);
@@ -45,7 +75,7 @@ export function RequestForm({
 
   const update = (i: number, patch: Partial<Companion>) =>
     setCompanions((cs) => cs.map((c, j) => (j === i ? { ...c, ...patch } : c)));
-  const add = (c?: Partial<Companion>) => canAdd && setCompanions((cs) => [...cs, { name: "", email: "", adult: false, ...c }]);
+  const add = (c?: Partial<Companion>) => canAdd && setCompanions((cs) => [...cs, { name: "", email: "", gender: "", adult: false, ...c }]);
   const unused = knownCompanions.filter((k) => !companions.some((c) => c.name === k.name));
 
   return (
@@ -63,6 +93,12 @@ export function RequestForm({
         <input id="r-mail" name="email" type="email" autoComplete="email" placeholder="du@domain.de" value={email} onChange={(ev) => setEmail(ev.target.value)} className={input} required />
         <Err msg={e.email} />
       </div>
+      {!notAttending && (
+        <>
+          <GenderPicker name="gender" legend="Geschlecht" value={gender} onChange={setGender} />
+          <Err msg={e.gender} />
+        </>
+      )}
 
       <label className="flex min-h-11 items-center gap-3 text-sm">
         <input type="checkbox" name="adult" checked={adult} onChange={(ev) => setAdult(ev.target.checked)} className="size-5 shrink-0" />
@@ -99,6 +135,8 @@ export function RequestForm({
           <label htmlFor={`c${i}-mail`} className="text-xs text-fg-2">E-Mail (optional)</label>
           <input id={`c${i}-mail`} type="email" value={c.email} placeholder="—" onChange={(ev) => update(i, { email: ev.target.value })} className={input} />
           <Err msg={e[`c${i}.email`]} />
+          <GenderPicker name={`c${i}-gender`} legend="Geschlecht" value={c.gender} onChange={(v) => update(i, { gender: v })} />
+          <Err msg={e[`c${i}.gender`]} />
           <label className="flex min-h-11 items-center gap-3 text-sm">
             <input type="checkbox" checked={c.adult} onChange={(ev) => update(i, { adult: ev.target.checked })} className="size-5 shrink-0" />
             18+ bestätigt
@@ -119,7 +157,7 @@ export function RequestForm({
             <button
               key={k.name}
               type="button"
-              onClick={() => add({ name: k.name, email: k.email ?? "" })}
+              onClick={() => add({ name: k.name, email: k.email ?? "", gender: k.gender ?? "" })}
               className="min-h-9 border border-line-2 px-2.5 text-fg-2 hover:border-accent"
             >
               + {k.name}
@@ -147,7 +185,7 @@ export function RequestForm({
       <label className="flex items-start gap-3 text-[11px] leading-relaxed text-muted">
         <input type="checkbox" name="privacy" checked={privacy} onChange={(ev) => setPrivacy(ev.target.checked)} className="mt-0.5 size-5 shrink-0" />
         <span>
-          Wir speichern nur Namen, E-Mail und 18+-Bestätigung, um die Gästeliste zu führen. Gelöscht 30 Tage nach der Party. Dein Konto bleibt,
+          Wir speichern nur Namen, E-Mail, Geschlecht und 18+-Bestätigung, um die Gästeliste zu führen. Gelöscht 30 Tage nach der Party. Dein Konto bleibt,
           bis du es löschst. Verstanden.
         </span>
       </label>

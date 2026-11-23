@@ -16,6 +16,7 @@ export interface QueueGuest {
   name: string;
   email: string | null;
   isBooker: boolean;
+  gender: string | null;
   status: DbGuestStatus;
   warnings: QueueWarning[];
 }
@@ -82,7 +83,7 @@ export async function loadQueue(partyId: string, statuses: DbGuestStatus[]): Pro
         for (const hit of findMatches([{ name: g.name, email: g.email }], blockRefs)) {
           warnings.push({ kind: "blocklist", text: `Sperrliste (${hit.by === "email" ? "E-Mail" : "Name"})${hit.match.reason ? `: ${hit.match.reason}` : ""}` });
         }
-        return { id: g.id, name: g.name, email: g.email, isBooker: g.isBooker, status: g.status, warnings };
+        return { id: g.id, name: g.name, email: g.email, isBooker: g.isBooker, gender: g.gender, status: g.status, warnings };
       });
 
     const bookingWarnings: QueueWarning[] = [];
